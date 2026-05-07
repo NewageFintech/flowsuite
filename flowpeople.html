@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowPeople — HR</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#F4F2ED;--surface:#FFF;--s2:#F8F7F3;--border:#E2DDD5;--border2:#CCC8BE;
+  --text:#1A1916;--t2:#6B6760;--t3:#9C9890;--ink:#1A1916;--ink-fg:#F4F2ED;
+  --green:#1C6B4A;--gbg:#E8F5EE;--amber:#8A5A0A;--abg:#FDF3DC;
+  --red:#8B2020;--rbg:#FDEAEA;--blue:#1A3B6E;--bbg:#E8EFF9;
+  --purple:#4A2080;--pbg:#F0EAFA;
+  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;--r:10px;--rl:16px;
+}
+body.dark{
+  --bg:#111110;--surface:#1C1B19;--s2:#242320;--border:#2E2D2A;--border2:#3D3C38;
+  --text:#F0EEE9;--t2:#A09D97;--t3:#6B6860;--ink:#F0EEE9;--ink-fg:#111110;
+  --green:#2D9E6B;--gbg:#0D2B1E;--amber:#C98A2A;--abg:#2A1E08;
+  --red:#D94F4F;--rbg:#2A0F0F;--blue:#4A7FD4;--bbg:#0D1E38;--purple:#8A5FD4;--pbg:#1A0D38;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)}
+.lc{background:var(--surface);border-radius:20px;padding:40px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.3)}
+.lc-logo{font-size:22px;font-weight:600;letter-spacing:-.5px;margin-bottom:2px}
+.lc-sub{font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:28px}
+.li{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--surface);outline:none;margin-bottom:12px;transition:border-color .15s;display:block}
+.li:focus{border-color:var(--border2)}
+.li-label{font-size:12px;font-weight:500;color:var(--t2);margin-bottom:5px;display:block}
+.login-btn{width:100%;padding:11px;background:var(--ink);color:var(--ink-fg);border:none;border-radius:9px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;margin-top:4px}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{font-size:12px;color:var(--red);background:var(--rbg);border:1px solid #f0b0b0;border-radius:8px;padding:8px 12px;margin-top:10px;display:none}
+.back-link{display:block;text-align:center;margin-top:16px;font-size:12px;color:var(--t3);text-decoration:none}
+.back-link:hover{color:var(--blue)}
+
+/* APP */
+.app{display:flex;height:100vh;overflow:hidden}
+#appShell{display:none}
+
+/* SIDEBAR */
+.sidebar{width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.logo-area{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-mark{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.logo-tag{font-size:10px;font-family:var(--mono);color:var(--t3);margin-top:1px}
+.nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nsec{font-size:10px;font-weight:500;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;padding:8px 10px 4px}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--t2);transition:all .15s;margin-bottom:1px;user-select:none}
+.ni:hover{background:var(--s2);color:var(--text)}
+.ni.active{background:var(--ink);color:var(--ink-fg)}
+.ni svg{width:16px;height:16px;flex-shrink:0}
+.ni-badge{margin-left:auto;font-size:10px;font-family:var(--mono);background:var(--abg);color:var(--amber);padding:2px 6px;border-radius:20px;font-weight:500}
+.ni.active .ni-badge{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-foot{padding:12px 14px;border-top:1px solid var(--border);font-size:12px;display:flex;flex-direction:column;gap:3px}
+.foot-name{font-weight:500;font-size:13px}
+.foot-link{font-size:11px;color:var(--blue);text-decoration:none;display:block;margin-top:1px}
+.foot-link:hover{text-decoration:underline}
+.logout-btn{background:none;border:none;font-family:var(--sans);font-size:11px;color:var(--t3);cursor:pointer;text-align:left;padding:0;margin-top:2px}
+.logout-btn:hover{color:var(--red)}
+.sync-row{display:flex;align-items:center;gap:5px;margin-top:2px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.sync-dot.warn{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:500;flex:1}
+.btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:7px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;color:var(--text);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--s2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-dark{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.btn-dark:hover{background:#2d2c28}
+.btn-sm{font-size:12px;padding:5px 10px;border-radius:6px}
+.btn-ghost{border-color:transparent;background:transparent}
+.btn-ghost:hover{background:var(--s2);border-color:var(--border)}
+.btn-danger{background:var(--rbg);color:var(--red);border-color:#f0b0b0}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:20px 24px 0}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px}
+.kpi-label{font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.kpi-value{font-size:26px;font-weight:300;letter-spacing:-1px;font-family:var(--mono)}
+.kpi-value.up{color:var(--green)}.kpi-value.warn{color:var(--amber)}.kpi-value.down{color:var(--red)}
+.kpi-sub{font-size:11px;color:var(--t3);margin-top:4px}
+
+/* SECTION */
+.section{padding:16px 24px 24px}
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.section-title{font-size:14px;font-weight:500}
+.twrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--s2)}
+th{text-align:left;padding:10px 14px;font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--s2)}
+.mono{font-family:var(--mono);font-size:12px}
+.empty{text-align:center;padding:40px;color:var(--t3);font-size:13px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.b-dot{width:5px;height:5px;border-radius:50%;opacity:.6}
+.b-green{background:var(--gbg);color:var(--green)}
+.b-red{background:var(--rbg);color:var(--red)}
+.b-amber{background:var(--abg);color:var(--amber)}
+.b-blue{background:var(--bbg);color:var(--blue)}
+.b-gray{background:var(--s2);color:var(--t2);border:1px solid var(--border)}
+.b-purple{background:var(--pbg);color:var(--purple)}
+
+/* MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(26,25,22,.55);z-index:200;align-items:center;justify-content:center;padding:20px}
+.mo.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);width:100%;max-width:600px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.18)}
+.modal.wide{max-width:760px}
+.mhd{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.mhd h3{font-size:15px;font-weight:500}
+.mclose{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:18px;line-height:1}
+.mclose:hover{background:var(--s2)}
+.mbody{padding:20px 24px}
+.fsec{margin-bottom:20px}
+.fsec-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.frow{display:flex;flex-direction:column;gap:5px}
+.frow label{font-size:12px;font-weight:500;color:var(--t2)}
+.req{color:var(--red)}
+.frow input,.frow select,.frow textarea{font-family:var(--sans);font-size:13px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:var(--border2)}
+.frow textarea{resize:vertical;min-height:70px}
+.mfoot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:var(--surface)}
+
+/* EMPLOYEE CARDS */
+.emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:16px 24px 24px}
+.emp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:18px;cursor:pointer;transition:all .15s}
+.emp-card:hover{border-color:var(--border2);box-shadow:0 4px 16px rgba(0,0,0,.06);transform:translateY(-1px)}
+.emp-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;margin-bottom:12px;flex-shrink:0}
+.emp-name{font-size:14px;font-weight:500;margin-bottom:2px}
+.emp-title{font-size:12px;color:var(--t2);margin-bottom:8px}
+.emp-meta{display:flex;gap:6px;flex-wrap:wrap}
+
+/* LEAVE CALENDAR */
+.leave-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px}
+.leave-day-hd{text-align:center;font-size:11px;color:var(--t3);font-weight:500;padding:4px}
+.leave-day{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;transition:background .12s;position:relative}
+.leave-day:hover{background:var(--s2)}
+.leave-day.today{background:var(--ink);color:var(--ink-fg);font-weight:600}
+.leave-day.has-leave{background:var(--abg);color:var(--amber)}
+.leave-day.approved{background:var(--gbg);color:var(--green)}
+.leave-day.other-month{opacity:.3}
+
+/* ORG CHART */
+.org-wrap{overflow-x:auto;padding:16px 24px 24px}
+.org-node{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:inline-flex;flex-direction:column;align-items:center;min-width:140px;cursor:pointer;transition:all .15s}
+.org-node:hover{border-color:var(--border2);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.org-node-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;margin-bottom:8px}
+.org-node-name{font-size:12px;font-weight:500;text-align:center}
+.org-node-title{font-size:11px;color:var(--t3);text-align:center;margin-top:2px}
+.org-level{display:flex;gap:20px;justify-content:center;position:relative;margin-bottom:32px}
+.org-level::before{content:'';position:absolute;top:-16px;left:50%;width:1px;height:16px;background:var(--border)}
+.org-root{margin-bottom:32px;display:flex;justify-content:center;position:relative}
+.org-root::after{content:'';position:absolute;bottom:-16px;left:50%;width:1px;height:16px;background:var(--border)}
+
+/* PAYROLL */
+.payroll-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.payroll-row:last-child{border-bottom:none}
+.payroll-name{font-weight:500;flex:1}
+.payroll-dept{font-size:11px;color:var(--t3);width:100px}
+.payroll-amount{font-family:var(--mono);font-size:13px;width:120px;text-align:right}
+.payroll-status{width:100px;text-align:right}
+
+/* DARK TOGGLE */
+.dark-toggle{display:flex;align-items:center;gap:7px;background:none;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--t2);padding:0;margin-top:4px}
+.dark-toggle:hover{color:var(--text)}
+.tog-track{width:28px;height:16px;border-radius:20px;background:var(--border2);position:relative;transition:background .2s;flex-shrink:0}
+.tog-track.on{background:var(--ink)}
+body.dark .tog-track.on{background:var(--text)}
+.tog-thumb{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tog-track.on .tog-thumb{transform:translateX(12px)}
+
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--t2);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;gap:10px;color:var(--t3);font-size:13px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--ink-fg);font-size:13px;padding:10px 18px;border-radius:10px;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;font-family:var(--sans)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{background:var(--red)}.toast.ok{background:var(--green)}
+.search-wrap{position:relative}
+.search-wrap input{padding:7px 12px 7px 30px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-family:var(--sans);font-size:13px;color:var(--text);outline:none;width:220px}
+.si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--t3);pointer-events:none}
+@media(max-width:900px){
+  .sidebar{width:48px}.logo-area,.nsec,.ni span,.sidebar-foot .sf-text,.logo-tag{display:none}
+  .ni{justify-content:center}.kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="lc">
+    <div class="lc-logo">FlowPeople</div>
+    <div class="lc-sub">HR module · anlsco</div>
+    <label class="li-label">Email</label>
+    <input class="li" id="loginEmail" type="email" placeholder="you@anls.com" autocomplete="email">
+    <label class="li-label">Password</label>
+    <input class="li" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="loginErr"></div>
+    <a class="back-link" href="index.html">← Back to FlowSuite</a>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-mark">FlowPeople</div>
+      <div class="logo-tag">HR module</div>
+    </div>
+    <nav class="nav">
+      <div class="nsec">Overview</div>
+      <div class="ni active" id="nav-dashboard" onclick="showView('dashboard')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/></svg>
+        <span>Dashboard</span>
+      </div>
+      <div class="nsec">People</div>
+      <div class="ni" id="nav-employees" onclick="showView('employees')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 13c0-3.31 2.69-6 6-6s6 2.69 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Employees</span>
+        <span class="ni-badge" id="nc-emp">0</span>
+      </div>
+      <div class="ni" id="nav-org" onclick="showView('org')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="6" y="1" width="4" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="10" width="4" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="6" y="10" width="4" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="11" y="10" width="4" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M8 4v3M3 10V8.5H13V10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>Org chart</span>
+      </div>
+      <div class="nsec">Time off</div>
+      <div class="ni" id="nav-leave" onclick="showView('leave')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v3M11 1v3M1 7h14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Leave requests</span>
+        <span class="ni-badge" id="nc-leave">0</span>
+      </div>
+      <div class="nsec">Payroll</div>
+      <div class="ni" id="nav-payroll" onclick="showView('payroll')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span>Payroll</span>
+      </div>
+      <div class="nsec">Records</div>
+      <div class="ni" id="nav-docs" onclick="showView('docs')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h7l3 3v9H3V2z" stroke="currentColor" stroke-width="1.5"/><path d="M10 2v3h3" stroke="currentColor" stroke-width="1.2"/><path d="M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>Documents</span>
+      </div>
+      <div class="ni" id="nav-performance" onclick="showView('performance')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12L5 8l3 2 3-5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Performance</span>
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="sf-text">
+        <div class="foot-name" id="sf-name">—</div>
+        <div class="sync-row"><span class="sync-dot warn" id="syncDot"></span><span style="font-size:11px;color:var(--t3)" id="syncLabel">Connecting…</span></div>
+        <a class="foot-link" href="index.html">⌂ FlowSuite home</a>
+        <a class="foot-link" href="flowtrack.html">← FlowTrack</a>
+        <button class="dark-toggle" onclick="toggleDark()">
+          <span class="tog-track" id="darkTrack"><span class="tog-thumb"></span></span>
+          <span id="darkLabel">Dark mode</span>
+        </button>
+        <button class="logout-btn" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="viewTitle">Dashboard</div>
+      <button class="btn" onclick="loadAll()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 118 2.5c2 0 3.7 1 4.7 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+      <button class="btn btn-dark" id="primaryBtn" onclick="primaryAction()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span id="primaryLabel">Add employee</span>
+      </button>
+    </div>
+    <div id="viewContent"></div>
+  </main>
+</div>
+</div>
+
+<!-- EMPLOYEE MODAL -->
+<div class="mo" id="empMo">
+  <div class="modal wide">
+    <div class="mhd"><h3 id="empTitle">Add employee</h3><button class="mclose" onclick="closeEmp()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="emp-id">
+      <div class="fsec">
+        <div class="fsec-title">Personal information</div>
+        <div class="fg">
+          <div class="frow"><label>First name <span class="req">*</span></label><input id="emp-first" placeholder="First name"></div>
+          <div class="frow"><label>Last name <span class="req">*</span></label><input id="emp-last" placeholder="Last name"></div>
+          <div class="frow"><label>Email <span class="req">*</span></label><input id="emp-email" type="email" placeholder="name@anls.com"></div>
+          <div class="frow"><label>Phone</label><input id="emp-phone" placeholder="+966 5X XXX XXXX"></div>
+          <div class="frow"><label>Date of birth</label><input id="emp-dob" type="date"></div>
+          <div class="frow"><label>Nationality</label><input id="emp-nationality" placeholder="Saudi"></div>
+          <div class="frow"><label>National ID / Iqama</label><input id="emp-nid" placeholder="ID number"></div>
+          <div class="frow"><label>Iqama expiry</label><input id="emp-iqama-exp" type="date"></div>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Employment details</div>
+        <div class="fg">
+          <div class="frow"><label>Job title <span class="req">*</span></label><input id="emp-title" placeholder="e.g. Project Engineer"></div>
+          <div class="frow"><label>Department</label>
+            <select id="emp-dept">
+              <option>Operations</option><option>Finance</option><option>Engineering</option>
+              <option>HR</option><option>Sales</option><option>IT</option><option>Management</option><option>Other</option>
+            </select>
+          </div>
+          <div class="frow"><label>Employment type</label>
+            <select id="emp-type">
+              <option>Full-time</option><option>Part-time</option><option>Contract</option><option>Intern</option>
+            </select>
+          </div>
+          <div class="frow"><label>Status</label>
+            <select id="emp-status">
+              <option>Active</option><option>On leave</option><option>Probation</option>
+              <option>Notice period</option><option>Terminated</option>
+            </select>
+          </div>
+          <div class="frow"><label>Start date</label><input id="emp-start" type="date"></div>
+          <div class="frow"><label>End date (if applicable)</label><input id="emp-end" type="date"></div>
+          <div class="frow"><label>Reports to</label><input id="emp-manager" placeholder="Manager name"></div>
+          <div class="frow"><label>Work location</label><input id="emp-location" placeholder="e.g. Dammam HQ"></div>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Compensation</div>
+        <div class="fg3">
+          <div class="frow"><label>Basic salary (SAR)</label><input id="emp-salary" type="number" min="0" placeholder="0"></div>
+          <div class="frow"><label>Housing allowance</label><input id="emp-housing" type="number" min="0" placeholder="0"></div>
+          <div class="frow"><label>Transport allowance</label><input id="emp-transport" type="number" min="0" placeholder="0"></div>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Leave entitlement (days/year)</div>
+        <div class="fg3">
+          <div class="frow"><label>Annual leave</label><input id="emp-annual-leave" type="number" min="0" placeholder="21"></div>
+          <div class="frow"><label>Sick leave</label><input id="emp-sick-leave" type="number" min="0" placeholder="30"></div>
+          <div class="frow"><label>Emergency leave</label><input id="emp-emergency-leave" type="number" min="0" placeholder="5"></div>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Notes</div>
+        <div class="frow"><textarea id="emp-notes" placeholder="Any notes about this employee…"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="empDeleteBtn" style="display:none" onclick="deleteEmp()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeEmp()">Cancel</button>
+        <button class="btn btn-dark" id="empSaveBtn" onclick="saveEmp()">Save employee</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LEAVE REQUEST MODAL -->
+<div class="mo" id="leaveMo">
+  <div class="modal">
+    <div class="mhd"><h3 id="leaveTitle">New leave request</h3><button class="mclose" onclick="closeLeave()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="leave-id">
+      <div class="fg">
+        <div class="frow"><label>Employee <span class="req">*</span></label>
+          <select id="leave-emp"></select>
+        </div>
+        <div class="frow"><label>Leave type</label>
+          <select id="leave-type">
+            <option>Annual</option><option>Sick</option><option>Emergency</option>
+            <option>Maternity</option><option>Paternity</option><option>Unpaid</option><option>Other</option>
+          </select>
+        </div>
+        <div class="frow"><label>From date <span class="req">*</span></label><input id="leave-from" type="date"></div>
+        <div class="frow"><label>To date <span class="req">*</span></label><input id="leave-to" type="date"></div>
+        <div class="frow"><label>Status</label>
+          <select id="leave-status">
+            <option>Pending</option><option>Approved</option><option>Rejected</option><option>Cancelled</option>
+          </select>
+        </div>
+        <div class="frow"><label>Days</label><input id="leave-days" type="number" min="0" placeholder="Auto" readonly style="background:var(--s2)"></div>
+        <div class="frow" style="grid-column:1/-1"><label>Reason</label><textarea id="leave-reason" placeholder="Reason for leave request…" style="min-height:60px"></textarea></div>
+        <div class="frow" style="grid-column:1/-1"><label>HR notes</label><textarea id="leave-notes" placeholder="HR / manager notes…" style="min-height:50px"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="leaveDeleteBtn" style="display:none" onclick="deleteLeave()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeLeave()">Cancel</button>
+        <button class="btn btn-dark" id="leaveSaveBtn" onclick="saveLeave()">Save request</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYROLL RUN MODAL -->
+<div class="mo" id="payrollMo">
+  <div class="modal">
+    <div class="mhd"><h3>Run payroll</h3><button class="mclose" onclick="document.getElementById('payrollMo').classList.remove('open')">×</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <div class="frow"><label>Payroll period</label>
+          <select id="pr-period">
+            <option>January 2026</option><option>February 2026</option><option>March 2026</option>
+            <option>April 2026</option><option>May 2026</option><option>June 2026</option>
+            <option>July 2026</option><option>August 2026</option><option>September 2026</option>
+            <option>October 2026</option><option>November 2026</option><option>December 2026</option>
+          </select>
+        </div>
+        <div class="frow"><label>Payment date</label><input id="pr-date" type="date"></div>
+      </div>
+      <div style="margin-top:16px;background:var(--s2);border-radius:8px;padding:14px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Total basic salaries</span><span class="mono" id="pr-total-basic">—</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Total allowances</span><span class="mono" id="pr-total-allow">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span>Total payroll</span><span class="mono" id="pr-total">—</span></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div style="font-size:12px;color:var(--t3)">This will create a payroll record for all active employees</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="document.getElementById('payrollMo').classList.remove('open')">Cancel</button>
+        <button class="btn btn-dark" onclick="runPayroll()">Confirm & run</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PERFORMANCE MODAL -->
+<div class="mo" id="perfMo">
+  <div class="modal">
+    <div class="mhd"><h3 id="perfTitle">Performance review</h3><button class="mclose" onclick="document.getElementById('perfMo').classList.remove('open')">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="perf-id">
+      <div class="fg">
+        <div class="frow"><label>Employee <span class="req">*</span></label><select id="perf-emp"></select></div>
+        <div class="frow"><label>Review period</label><input id="perf-period" placeholder="e.g. Q1 2026"></div>
+        <div class="frow"><label>Review date</label><input id="perf-date" type="date"></div>
+        <div class="frow"><label>Overall rating</label>
+          <select id="perf-rating">
+            <option value="5">5 — Outstanding</option><option value="4">4 — Exceeds expectations</option>
+            <option value="3">3 — Meets expectations</option><option value="2">2 — Needs improvement</option>
+            <option value="1">1 — Unsatisfactory</option>
+          </select>
+        </div>
+      </div>
+      <div class="fsec" style="margin-top:14px">
+        <div class="fsec-title">Review details</div>
+        <div class="frow" style="margin-bottom:10px"><label>Strengths</label><textarea id="perf-strengths" placeholder="Key strengths observed…" style="min-height:60px"></textarea></div>
+        <div class="frow" style="margin-bottom:10px"><label>Areas for improvement</label><textarea id="perf-improve" placeholder="Areas that need development…" style="min-height:60px"></textarea></div>
+        <div class="frow"><label>Goals for next period</label><textarea id="perf-goals" placeholder="Agreed goals and targets…" style="min-height:60px"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="perfDeleteBtn" style="display:none" onclick="deletePerf()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="document.getElementById('perfMo').classList.remove('open')">Cancel</button>
+        <button class="btn btn-dark" id="perfSaveBtn" onclick="savePerf()">Save review</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL = 'https://pqcjhdrvqzcsvddimwaq.supabase.co';
+const SUPA_KEY = 'sb_publishable_Que35EYrhPKCFzQuz9Okog_QkU0fbmh';
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY, {
+  auth: { persistSession:true, detectSessionInUrl:true, storageKey:'flowsuite-auth', storage:window.localStorage }
+});
+
+// Session restore from URL hash (file:// fallback)
+(async function() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return;
+  const p = new URLSearchParams(hash);
+  const at = p.get('access_token'), rt = p.get('refresh_token');
+  if (at && rt) { await db.auth.setSession({access_token:at,refresh_token:rt}); history.replaceState(null,'',window.location.pathname); }
+})();
+
+let currentUser = null, currentRole = null;
+let employees = [], leaveRequests = [], payrollRuns = [], perfReviews = [], documents = [];
+let currentView = 'dashboard';
+
+const VIEW_TITLES = { dashboard:'Dashboard', employees:'Employees', org:'Organisation chart', leave:'Leave requests', payroll:'Payroll', docs:'Documents', performance:'Performance reviews' };
+const PRIMARY_LABELS = { dashboard:'Add employee', employees:'Add employee', org:'Add employee', leave:'New request', payroll:'Run payroll', docs:'Upload document', performance:'New review' };
+
+// ── UTILS ──────────────────────────────────────────────────────
+function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type?' '+type:'');clearTimeout(el._t);el._t=setTimeout(()=>el.className='toast',2800);}
+function setSync(s){const d=document.getElementById('syncDot'),l=document.getElementById('syncLabel');d.className='sync-dot'+(s==='ok'?'':s==='err'?' err':' warn');l.textContent=s==='ok'?'Synced':s==='err'?'Error':'Syncing…';}
+function fmt(n){return n?Number(n).toLocaleString('en-SA'):'0';}
+function today(){return new Date().toISOString().split('T')[0];}
+function initials(name){return(name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function avatarColor(name){const colors=['#1A3B6E','#1C6B4A','#4A2080','#8A5A0A','#8B2020'];return colors[(name||'').charCodeAt(0)%colors.length];}
+function calcDays(from,to){if(!from||!to)return 0;return Math.max(0,Math.round((new Date(to)-new Date(from))/86400000)+1);}
+
+// ── AUTH ──────────────────────────────────────────────────────
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const btn=document.getElementById('loginBtn');
+  if(!email||!pass){showErr('Enter email and password.');return;}
+  btn.disabled=true;btn.textContent='Signing in…';
+  document.getElementById('loginErr').style.display='none';
+  try{
+    const{data,error}=await db.auth.signInWithPassword({email,password:pass});
+    if(error)throw error;
+    const{data:profile}=await db.from('profiles').select('*').eq('id',data.user.id).single();
+    currentUser=data.user; currentRole=profile?.role||'operations';
+    document.getElementById('sf-name').textContent=profile?.full_name||email;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('appShell').style.display='block';
+    await loadAll();
+  }catch(e){showErr(e.message||'Login failed.');btn.disabled=false;btn.textContent='Sign in';}
+}
+function showErr(msg){const e=document.getElementById('loginErr');e.textContent=msg;e.style.display='block';document.getElementById('loginBtn').disabled=false;document.getElementById('loginBtn').textContent='Sign in';}
+async function doLogout(){await db.auth.signOut();document.getElementById('appShell').style.display='none';document.getElementById('loginScreen').style.display='flex';document.getElementById('loginPass').value='';}
+(async()=>{
+  const{data:{session}}=await db.auth.getSession();
+  if(session?.user){
+    const{data:profile}=await db.from('profiles').select('*').eq('id',session.user.id).single();
+    currentUser=session.user;currentRole=profile?.role||'operations';
+    document.getElementById('sf-name').textContent=profile?.full_name||session.user.email;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('appShell').style.display='block';
+    await loadAll();
+  }
+  document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
+  if(localStorage.getItem('flowtrack-dark')==='1'){document.body.classList.add('dark');updateDarkUI(true);}
+})();
+
+// ── DATA ──────────────────────────────────────────────────────
+async function loadAll(){
+  setSync('loading');
+  try{
+    const[empR,leaveR,payR,perfR,docR]=await Promise.all([
+      db.from('hr_employees').select('*').order('first_name'),
+      db.from('hr_leave').select('*').order('created_at',{ascending:false}),
+      db.from('hr_payroll').select('*').order('created_at',{ascending:false}),
+      db.from('hr_performance').select('*').order('review_date',{ascending:false}),
+      db.from('hr_documents').select('*').order('created_at',{ascending:false}),
+    ]);
+    employees=empR.data||[]; leaveRequests=leaveR.data||[];
+    payrollRuns=payR.data||[]; perfReviews=perfR.data||[]; documents=docR.data||[];
+    setSync('ok');
+    document.getElementById('nc-emp').textContent=employees.filter(e=>e.status==='Active').length;
+    document.getElementById('nc-leave').textContent=leaveRequests.filter(l=>l.status==='Pending').length;
+    render();
+  }catch(e){setSync('err');toast('Load failed: '+e.message,'err');}
+}
+
+// ── VIEW ROUTING ──────────────────────────────────────────────
+function showView(v){
+  currentView=v;
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  const ni=document.getElementById('nav-'+v);if(ni)ni.classList.add('active');
+  document.getElementById('viewTitle').textContent=VIEW_TITLES[v]||v;
+  document.getElementById('primaryLabel').textContent=PRIMARY_LABELS[v]||'Add';
+  render();
+}
+function primaryAction(){
+  const map={dashboard:openNewEmp,employees:openNewEmp,org:openNewEmp,leave:openNewLeave,payroll:openPayrollModal,docs:()=>toast('Document uploads coming soon'),performance:openNewPerf};
+  (map[currentView]||openNewEmp)();
+}
+function render(){
+  const vc=document.getElementById('viewContent');
+  const views={dashboard:renderDashboard,employees:renderEmployees,org:renderOrg,leave:renderLeave,payroll:renderPayroll,docs:renderDocs,performance:renderPerformance};
+  (views[currentView]||renderDashboard)(vc);
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function renderDashboard(c){
+  const active=employees.filter(e=>e.status==='Active').length;
+  const onLeave=employees.filter(e=>e.status==='On leave').length;
+  const pendingLeave=leaveRequests.filter(l=>l.status==='Pending').length;
+  const expiring=employees.filter(e=>{if(!e.iqama_expiry)return false;const d=new Date(e.iqama_expiry);const now=new Date();const diff=(d-now)/86400000;return diff>0&&diff<=60;}).length;
+  const totalPayroll=employees.filter(e=>e.status==='Active').reduce((s,e)=>s+(e.basic_salary||0)+(e.housing_allowance||0)+(e.transport_allowance||0),0);
+  const deptMap={};employees.filter(e=>e.status==='Active').forEach(e=>{deptMap[e.department||'Other']=(deptMap[e.department||'Other']||0)+1;});
+  const recentLeave=leaveRequests.slice(0,5);
+  c.innerHTML=`
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Active employees</div><div class="kpi-value up">${active}</div><div class="kpi-sub">Currently employed</div></div>
+    <div class="kpi"><div class="kpi-label">On leave</div><div class="kpi-value warn">${onLeave}</div><div class="kpi-sub">Away today</div></div>
+    <div class="kpi"><div class="kpi-label">Pending leave</div><div class="kpi-value warn">${pendingLeave}</div><div class="kpi-sub">Awaiting approval</div></div>
+    <div class="kpi"><div class="kpi-label">Iqama expiring</div><div class="kpi-value ${expiring>0?'down':''}">${expiring}</div><div class="kpi-sub">Within 60 days</div></div>
+    <div class="kpi"><div class="kpi-label">Monthly payroll</div><div class="kpi-value" style="font-size:18px">${fmt(totalPayroll)}</div><div class="kpi-sub">SAR total</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 24px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:18px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:14px">Headcount by department</div>
+      ${Object.entries(deptMap).sort((a,b)=>b[1]-a[1]).map(([dept,count])=>{
+        const pct=Math.round(count/active*100)||0;
+        return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px">
+          <span style="width:90px;color:var(--t2)">${dept}</span>
+          <div style="flex:1;height:6px;background:var(--s2);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--ink);border-radius:3px"></div></div>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--t3);width:30px;text-align:right">${count}</span>
+        </div>`;
+      }).join('')||'<div style="color:var(--t3);font-size:13px">No employees yet</div>'}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+      <div style="padding:14px 16px;font-size:13px;font-weight:500;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        Recent leave requests
+        <button class="btn btn-sm" onclick="showView('leave')">View all</button>
+      </div>
+      ${recentLeave.length?recentLeave.map(l=>{
+        const emp=employees.find(e=>e.id===l.employee_id);
+        return`<div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:${avatarColor(emp?.first_name||'')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">${initials((emp?.first_name||'?')+' '+(emp?.last_name||''))}</div>
+          <div style="flex:1"><div style="font-weight:500">${emp?(emp.first_name+' '+emp.last_name):'Unknown'}</div><div style="font-size:11px;color:var(--t3)">${l.leave_type} · ${l.from_date} – ${l.to_date}</div></div>
+          ${leaveBadge(l.status)}
+        </div>`;
+      }).join(''):'<div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">No leave requests</div>'}
+    </div>
+  </div>`;
+}
+
+// ── EMPLOYEES ─────────────────────────────────────────────────
+function renderEmployees(c){
+  c.innerHTML=`
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">All employees (${employees.length})</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="search-wrap">
+          <svg class="si" width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10 10l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" id="empSearch" placeholder="Search employees…" oninput="filterEmployees(this.value)">
+        </div>
+        <select class="btn btn-sm" style="padding:5px 10px;font-size:12px" onchange="filterEmployeesByDept(this.value)">
+          <option value="">All departments</option>
+          <option>Operations</option><option>Finance</option><option>Engineering</option>
+          <option>HR</option><option>Sales</option><option>IT</option><option>Management</option>
+        </select>
+      </div>
+    </div>
+    <div id="empGrid" class="emp-grid"></div>
+  </div>`;
+  filterEmployees('');
+}
+function filterEmployees(q,dept=''){
+  const grid=document.getElementById('empGrid');if(!grid)return;
+  let filtered=employees.filter(e=>!q||[e.first_name,e.last_name,e.job_title,e.department,e.email].some(v=>(v||'').toLowerCase().includes(q.toLowerCase())));
+  if(dept) filtered=filtered.filter(e=>e.department===dept);
+  grid.innerHTML=filtered.map(e=>`
+    <div class="emp-card" onclick="openEditEmp('${e.id}')">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="emp-avatar" style="background:${avatarColor(e.first_name)};color:#fff">${initials(e.first_name+' '+e.last_name)}</div>
+        <div>
+          <div class="emp-name">${e.first_name} ${e.last_name}</div>
+          <div class="emp-title">${e.job_title||'—'}</div>
+        </div>
+      </div>
+      <div class="emp-meta">
+        ${empStatusBadge(e.status)}
+        <span class="badge b-gray">${e.department||'—'}</span>
+        ${e.employment_type?`<span class="badge b-blue">${e.employment_type}</span>`:''}
+      </div>
+      ${e.iqama_expiry&&new Date(e.iqama_expiry)<new Date(Date.now()+60*86400000)?`<div style="margin-top:8px;font-size:11px;color:var(--amber)">⚠ Iqama expires ${e.iqama_expiry}</div>`:''}
+    </div>`).join('')||'<div class="empty" style="grid-column:1/-1">No employees found</div>';
+}
+function filterEmployeesByDept(dept){
+  const q=document.getElementById('empSearch')?.value||'';
+  filterEmployees(q,dept);
+}
+
+// ── ORG CHART ─────────────────────────────────────────────────
+function renderOrg(c){
+  const mgmtEmps=employees.filter(e=>e.department==='Management'&&e.status==='Active');
+  const others=employees.filter(e=>e.department!=='Management'&&e.status==='Active');
+  const depts={};others.forEach(e=>{(depts[e.department||'Other']=depts[e.department||'Other']||[]).push(e);});
+  c.innerHTML=`<div class="org-wrap">
+    <div class="org-root">
+      ${mgmtEmps.map(e=>`<div class="org-node" onclick="openEditEmp('${e.id}')">
+        <div class="org-node-avatar" style="background:${avatarColor(e.first_name)};color:#fff">${initials(e.first_name+' '+e.last_name)}</div>
+        <div class="org-node-name">${e.first_name} ${e.last_name}</div>
+        <div class="org-node-title">${e.job_title||'Management'}</div>
+      </div>`).join('')||`<div class="org-node"><div class="org-node-name" style="color:var(--t3)">Add management team</div></div>`}
+    </div>
+    <div class="org-level" style="flex-wrap:wrap;gap:16px 20px">
+      ${Object.entries(depts).map(([dept,emps])=>`
+        <div style="text-align:center">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:10px">${dept}</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+            ${emps.map(e=>`<div class="org-node" onclick="openEditEmp('${e.id}')">
+              <div class="org-node-avatar" style="background:${avatarColor(e.first_name)};color:#fff">${initials(e.first_name+' '+e.last_name)}</div>
+              <div class="org-node-name">${e.first_name} ${e.last_name}</div>
+              <div class="org-node-title">${e.job_title||dept}</div>
+            </div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ── LEAVE ─────────────────────────────────────────────────────
+const LEAVE_STATUS_COLOR={Pending:'b-amber',Approved:'b-green',Rejected:'b-red',Cancelled:'b-gray'};
+function leaveBadge(s){return`<span class="badge ${LEAVE_STATUS_COLOR[s]||'b-gray'}"><span class="b-dot" style="background:currentColor"></span>${s||'—'}</span>`;}
+function renderLeave(c){
+  c.innerHTML=`
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">Leave requests (${leaveRequests.length})</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm${currentLeaveFilter===''?' btn-dark':''}" onclick="setLeaveFilter('',this)">All</button>
+        <button class="btn btn-sm${currentLeaveFilter==='Pending'?' btn-dark':''}" onclick="setLeaveFilter('Pending',this)">Pending</button>
+        <button class="btn btn-sm${currentLeaveFilter==='Approved'?' btn-dark':''}" onclick="setLeaveFilter('Approved',this)">Approved</button>
+      </div>
+    </div>
+    <div class="twrap"><table>
+      <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="leaveTbody"></tbody>
+    </table>
+    <div id="leaveEmpty" class="empty" style="display:none">No leave requests</div>
+    </div>
+  </div>`;
+  renderLeaveTable();
+}
+let currentLeaveFilter='';
+function setLeaveFilter(f){currentLeaveFilter=f;renderLeaveTable();}
+function renderLeaveTable(){
+  const tbody=document.getElementById('leaveTbody'),empty=document.getElementById('leaveEmpty');if(!tbody)return;
+  const filtered=currentLeaveFilter?leaveRequests.filter(l=>l.status===currentLeaveFilter):leaveRequests;
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='';return;}
+  empty.style.display='none';
+  tbody.innerHTML=filtered.map(l=>{
+    const emp=employees.find(e=>e.id===l.employee_id);
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${avatarColor(emp?.first_name||'')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">${initials((emp?.first_name||'?')+' '+(emp?.last_name||''))}</div>
+        <span style="font-weight:500">${emp?emp.first_name+' '+emp.last_name:'Unknown'}</span>
+      </div></td>
+      <td><span class="badge b-blue">${l.leave_type||'—'}</span></td>
+      <td class="mono">${l.from_date||'—'}</td>
+      <td class="mono">${l.to_date||'—'}</td>
+      <td class="mono">${l.days||'—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">${l.reason||'—'}</td>
+      <td>${leaveBadge(l.status)}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-sm btn-ghost" onclick="openEditLeave('${l.id}')">Edit</button>
+        ${l.status==='Pending'?`<button class="btn btn-sm" style="background:var(--gbg);color:var(--green);border-color:var(--green)" onclick="approveLeave('${l.id}')">Approve</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function approveLeave(id){
+  const{error}=await db.from('hr_leave').update({status:'Approved',updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Leave approved ✓','ok');await loadAll();
+}
+
+// ── PAYROLL ───────────────────────────────────────────────────
+function renderPayroll(c){
+  const active=employees.filter(e=>e.status==='Active');
+  const totalBasic=active.reduce((s,e)=>s+(e.basic_salary||0),0);
+  const totalAllow=active.reduce((s,e)=>s+(e.housing_allowance||0)+(e.transport_allowance||0),0);
+  c.innerHTML=`
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">Payroll summary</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div class="kpi"><div class="kpi-label">Total basic</div><div class="kpi-value" style="font-size:20px">${fmt(totalBasic)}</div><div class="kpi-sub">SAR / month</div></div>
+      <div class="kpi"><div class="kpi-label">Total allowances</div><div class="kpi-value" style="font-size:20px">${fmt(totalAllow)}</div><div class="kpi-sub">SAR / month</div></div>
+      <div class="kpi"><div class="kpi-label">Total payroll</div><div class="kpi-value up" style="font-size:20px">${fmt(totalBasic+totalAllow)}</div><div class="kpi-sub">SAR / month</div></div>
+    </div>
+    <div class="twrap"><table>
+      <thead><tr><th>Employee</th><th>Department</th><th>Basic (SAR)</th><th>Housing</th><th>Transport</th><th>Total</th><th>Status</th></tr></thead>
+      <tbody>${active.map(e=>{
+        const total=(e.basic_salary||0)+(e.housing_allowance||0)+(e.transport_allowance||0);
+        return`<tr>
+          <td style="font-weight:500">${e.first_name} ${e.last_name}</td>
+          <td><span class="badge b-gray">${e.department||'—'}</span></td>
+          <td class="mono">${fmt(e.basic_salary)}</td>
+          <td class="mono">${fmt(e.housing_allowance)}</td>
+          <td class="mono">${fmt(e.transport_allowance)}</td>
+          <td class="mono" style="font-weight:500">${fmt(total)}</td>
+          <td><span class="badge b-green"><span class="b-dot" style="background:currentColor"></span>Active</span></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+    ${!active.length?'<div class="empty">No active employees</div>':''}
+    </div>
+    ${payrollRuns.length?`<div style="margin-top:20px"><div class="section-title" style="margin-bottom:12px">Payroll history</div>
+    <div class="twrap"><table>
+      <thead><tr><th>Period</th><th>Payment date</th><th>Employees</th><th>Total (SAR)</th><th>Status</th></tr></thead>
+      <tbody>${payrollRuns.map(pr=>`<tr>
+        <td style="font-weight:500">${pr.period||'—'}</td>
+        <td class="mono">${pr.payment_date||'—'}</td>
+        <td class="mono">${pr.employee_count||'—'}</td>
+        <td class="mono">${fmt(pr.total_amount)}</td>
+        <td><span class="badge b-green">Processed</span></td>
+      </tr>`).join('')}
+      </tbody></table></div></div>`:''}
+  </div>`;
+}
+function openPayrollModal(){
+  const active=employees.filter(e=>e.status==='Active');
+  const totalBasic=active.reduce((s,e)=>s+(e.basic_salary||0),0);
+  const totalAllow=active.reduce((s,e)=>s+(e.housing_allowance||0)+(e.transport_allowance||0),0);
+  document.getElementById('pr-date').value=today();
+  document.getElementById('pr-total-basic').textContent='SAR '+fmt(totalBasic);
+  document.getElementById('pr-total-allow').textContent='SAR '+fmt(totalAllow);
+  document.getElementById('pr-total').textContent='SAR '+fmt(totalBasic+totalAllow);
+  // Set current month
+  const mn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const now=new Date();
+  document.getElementById('pr-period').value=mn[now.getMonth()]+' '+now.getFullYear();
+  document.getElementById('payrollMo').classList.add('open');
+}
+async function runPayroll(){
+  const active=employees.filter(e=>e.status==='Active');
+  const total=active.reduce((s,e)=>s+(e.basic_salary||0)+(e.housing_allowance||0)+(e.transport_allowance||0),0);
+  const{error}=await db.from('hr_payroll').insert({
+    period:document.getElementById('pr-period').value,
+    payment_date:document.getElementById('pr-date').value,
+    employee_count:active.length,total_amount:total,
+    created_at:new Date().toISOString(),updated_at:new Date().toISOString(),
+  });
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Payroll run processed ✓','ok');
+  document.getElementById('payrollMo').classList.remove('open');
+  await loadAll();
+}
+
+// ── DOCUMENTS ─────────────────────────────────────────────────
+function renderDocs(c){
+  c.innerHTML=`<div class="section">
+    <div class="section-hd"><div class="section-title">Employee documents (${documents.length})</div></div>
+    <div class="twrap"><table>
+      <thead><tr><th>Employee</th><th>Document type</th><th>File name</th><th>Expiry</th><th>Uploaded</th></tr></thead>
+      <tbody>${documents.map(d=>{
+        const emp=employees.find(e=>e.id===d.employee_id);
+        const expired=d.expiry_date&&new Date(d.expiry_date)<new Date();
+        return`<tr>
+          <td style="font-weight:500">${emp?emp.first_name+' '+emp.last_name:'—'}</td>
+          <td><span class="badge b-blue">${d.doc_type||'—'}</span></td>
+          <td>${d.file_url?`<a href="${d.file_url}" target="_blank" style="color:var(--blue);text-decoration:none;font-size:12px;font-family:var(--mono)">${d.file_name||'View'}</a>`:'—'}</td>
+          <td class="mono" style="${expired?'color:var(--red)':''}">${d.expiry_date||'—'}${expired?' ⚠':''}</td>
+          <td class="mono" style="color:var(--t3)">${d.created_at?d.created_at.split('T')[0]:'—'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+    ${!documents.length?'<div class="empty">No documents uploaded yet</div>':''}
+    </div>
+  </div>`;
+}
+
+// ── PERFORMANCE ───────────────────────────────────────────────
+const RATING_LABELS={5:'Outstanding',4:'Exceeds expectations',3:'Meets expectations',2:'Needs improvement',1:'Unsatisfactory'};
+const RATING_COLORS={5:'b-green',4:'b-green',3:'b-blue',2:'b-amber',1:'b-red'};
+function renderPerformance(c){
+  c.innerHTML=`<div class="section">
+    <div class="section-hd"><div class="section-title">Performance reviews (${perfReviews.length})</div></div>
+    <div class="twrap"><table>
+      <thead><tr><th>Employee</th><th>Period</th><th>Review date</th><th>Rating</th><th>Strengths</th><th>Actions</th></tr></thead>
+      <tbody>${perfReviews.map(pr=>{
+        const emp=employees.find(e=>e.id===pr.employee_id);
+        return`<tr>
+          <td style="font-weight:500">${emp?emp.first_name+' '+emp.last_name:'—'}</td>
+          <td class="mono">${pr.review_period||'—'}</td>
+          <td class="mono">${pr.review_date||'—'}</td>
+          <td><span class="badge ${RATING_COLORS[pr.rating]||'b-gray'}">${pr.rating}/5 — ${RATING_LABELS[pr.rating]||'—'}</span></td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2);font-size:12px">${pr.strengths||'—'}</td>
+          <td><button class="btn btn-sm btn-ghost" onclick="openEditPerf('${pr.id}')">Edit</button></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+    ${!perfReviews.length?'<div class="empty">No performance reviews yet</div>':''}
+    </div>
+  </div>`;
+}
+
+// ── EMPLOYEE CRUD ─────────────────────────────────────────────
+const EMP_STATUS_COLORS={Active:'b-green','On leave':'b-amber',Probation:'b-blue','Notice period':'b-amber',Terminated:'b-red'};
+function empStatusBadge(s){return`<span class="badge ${EMP_STATUS_COLORS[s]||'b-gray'}"><span class="b-dot" style="background:currentColor"></span>${s||'Active'}</span>`;}
+function openNewEmp(){
+  document.getElementById('emp-id').value='';
+  document.getElementById('empTitle').textContent='Add employee';
+  document.getElementById('empDeleteBtn').style.display='none';
+  ['emp-first','emp-last','emp-email','emp-phone','emp-dob','emp-nationality','emp-nid','emp-iqama-exp',
+   'emp-title','emp-manager','emp-location','emp-start','emp-end','emp-salary','emp-housing',
+   'emp-transport','emp-annual-leave','emp-sick-leave','emp-emergency-leave','emp-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('emp-dept').value='Operations';
+  document.getElementById('emp-type').value='Full-time';
+  document.getElementById('emp-status').value='Active';
+  document.getElementById('emp-annual-leave').value='21';
+  document.getElementById('emp-sick-leave').value='30';
+  document.getElementById('emp-emergency-leave').value='5';
+  document.getElementById('empMo').classList.add('open');
+}
+function openEditEmp(id){
+  const e=employees.find(x=>x.id===id);if(!e)return;
+  document.getElementById('emp-id').value=e.id;
+  document.getElementById('empTitle').textContent='Edit employee';
+  document.getElementById('empDeleteBtn').style.display='';
+  const set=(fid,val)=>{const el=document.getElementById(fid);if(el)el.value=val||'';};
+  set('emp-first',e.first_name);set('emp-last',e.last_name);set('emp-email',e.email);
+  set('emp-phone',e.phone);set('emp-dob',e.date_of_birth);set('emp-nationality',e.nationality);
+  set('emp-nid',e.national_id);set('emp-iqama-exp',e.iqama_expiry);set('emp-title',e.job_title);
+  set('emp-manager',e.reports_to);set('emp-location',e.work_location);set('emp-start',e.start_date);
+  set('emp-end',e.end_date);set('emp-salary',e.basic_salary);set('emp-housing',e.housing_allowance);
+  set('emp-transport',e.transport_allowance);set('emp-annual-leave',e.annual_leave_days);
+  set('emp-sick-leave',e.sick_leave_days);set('emp-emergency-leave',e.emergency_leave_days);
+  set('emp-notes',e.notes);
+  document.getElementById('emp-dept').value=e.department||'Operations';
+  document.getElementById('emp-type').value=e.employment_type||'Full-time';
+  document.getElementById('emp-status').value=e.status||'Active';
+  document.getElementById('empMo').classList.add('open');
+}
+function closeEmp(){document.getElementById('empMo').classList.remove('open');}
+async function saveEmp(){
+  const first=document.getElementById('emp-first').value.trim();
+  const last=document.getElementById('emp-last').value.trim();
+  const email=document.getElementById('emp-email').value.trim();
+  if(!first||!last||!email){toast('First name, last name and email required','err');return;}
+  const g=id=>document.getElementById(id)?.value||null;
+  const editId=document.getElementById('emp-id').value;
+  const payload={
+    first_name:first,last_name:last,email,phone:g('emp-phone'),
+    date_of_birth:g('emp-dob'),nationality:g('emp-nationality'),national_id:g('emp-nid'),
+    iqama_expiry:g('emp-iqama-exp'),job_title:g('emp-title'),
+    department:document.getElementById('emp-dept').value,
+    employment_type:document.getElementById('emp-type').value,
+    status:document.getElementById('emp-status').value,
+    start_date:g('emp-start'),end_date:g('emp-end'),reports_to:g('emp-manager'),
+    work_location:g('emp-location'),
+    basic_salary:parseFloat(g('emp-salary'))||0,
+    housing_allowance:parseFloat(g('emp-housing'))||0,
+    transport_allowance:parseFloat(g('emp-transport'))||0,
+    annual_leave_days:parseInt(g('emp-annual-leave'))||21,
+    sick_leave_days:parseInt(g('emp-sick-leave'))||30,
+    emergency_leave_days:parseInt(g('emp-emergency-leave'))||5,
+    notes:g('emp-notes'),updated_at:new Date().toISOString(),
+  };
+  const btn=document.getElementById('empSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    if(editId){const{error}=await db.from('hr_employees').update(payload).eq('id',editId);if(error)throw error;toast('Employee updated','ok');}
+    else{const{error}=await db.from('hr_employees').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Employee added','ok');}
+    closeEmp();await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save employee';}
+}
+async function deleteEmp(){
+  const id=document.getElementById('emp-id').value;if(!id||!confirm('Delete this employee record?'))return;
+  const{error}=await db.from('hr_employees').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok');closeEmp();await loadAll();
+}
+
+// ── LEAVE CRUD ────────────────────────────────────────────────
+function populateEmpDropdown(selectId,selectedId){
+  const sel=document.getElementById(selectId);if(!sel)return;
+  sel.innerHTML=employees.map(e=>`<option value="${e.id}" ${e.id===selectedId?'selected':''}>${e.first_name} ${e.last_name}</option>`).join('');
+}
+function openNewLeave(){
+  document.getElementById('leave-id').value='';
+  document.getElementById('leaveTitle').textContent='New leave request';
+  document.getElementById('leaveDeleteBtn').style.display='none';
+  ['leave-from','leave-to','leave-reason','leave-notes','leave-days'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('leave-status').value='Pending';
+  document.getElementById('leave-type').value='Annual';
+  populateEmpDropdown('leave-emp','');
+  document.getElementById('leaveMo').classList.add('open');
+}
+function openEditLeave(id){
+  const l=leaveRequests.find(x=>x.id===id);if(!l)return;
+  document.getElementById('leave-id').value=l.id;
+  document.getElementById('leaveTitle').textContent='Edit leave request';
+  document.getElementById('leaveDeleteBtn').style.display='';
+  document.getElementById('leave-from').value=l.from_date||'';
+  document.getElementById('leave-to').value=l.to_date||'';
+  document.getElementById('leave-days').value=l.days||'';
+  document.getElementById('leave-reason').value=l.reason||'';
+  document.getElementById('leave-notes').value=l.notes||'';
+  document.getElementById('leave-status').value=l.status||'Pending';
+  document.getElementById('leave-type').value=l.leave_type||'Annual';
+  populateEmpDropdown('leave-emp',l.employee_id);
+  document.getElementById('leaveMo').classList.add('open');
+}
+function closeLeave(){document.getElementById('leaveMo').classList.remove('open');}
+// Auto-calc days
+['leave-from','leave-to'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change',()=>{
+    const f=document.getElementById('leave-from').value,t=document.getElementById('leave-to').value;
+    document.getElementById('leave-days').value=calcDays(f,t)||'';
+  });
+});
+async function saveLeave(){
+  const empId=document.getElementById('leave-emp').value;
+  const from=document.getElementById('leave-from').value;
+  const to=document.getElementById('leave-to').value;
+  if(!empId||!from||!to){toast('Employee, from date and to date required','err');return;}
+  const editId=document.getElementById('leave-id').value;
+  const payload={
+    employee_id:empId,leave_type:document.getElementById('leave-type').value,
+    from_date:from,to_date:to,days:calcDays(from,to),
+    status:document.getElementById('leave-status').value,
+    reason:document.getElementById('leave-reason').value||null,
+    notes:document.getElementById('leave-notes').value||null,
+    updated_at:new Date().toISOString(),
+  };
+  const btn=document.getElementById('leaveSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    if(editId){const{error}=await db.from('hr_leave').update(payload).eq('id',editId);if(error)throw error;toast('Leave updated','ok');}
+    else{const{error}=await db.from('hr_leave').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Leave request created','ok');}
+    closeLeave();await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save request';}
+}
+async function deleteLeave(){
+  const id=document.getElementById('leave-id').value;if(!id||!confirm('Delete this leave request?'))return;
+  const{error}=await db.from('hr_leave').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok');closeLeave();await loadAll();
+}
+
+// ── PERFORMANCE CRUD ──────────────────────────────────────────
+function openNewPerf(){
+  document.getElementById('perf-id').value='';
+  document.getElementById('perfTitle').textContent='New performance review';
+  document.getElementById('perfDeleteBtn').style.display='none';
+  ['perf-period','perf-strengths','perf-improve','perf-goals'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('perf-date').value=today();
+  document.getElementById('perf-rating').value='3';
+  populateEmpDropdown('perf-emp','');
+  document.getElementById('perfMo').classList.add('open');
+}
+function openEditPerf(id){
+  const pr=perfReviews.find(x=>x.id===id);if(!pr)return;
+  document.getElementById('perf-id').value=pr.id;
+  document.getElementById('perfTitle').textContent='Edit review';
+  document.getElementById('perfDeleteBtn').style.display='';
+  document.getElementById('perf-period').value=pr.review_period||'';
+  document.getElementById('perf-date').value=pr.review_date||'';
+  document.getElementById('perf-rating').value=pr.rating||'3';
+  document.getElementById('perf-strengths').value=pr.strengths||'';
+  document.getElementById('perf-improve').value=pr.areas_for_improvement||'';
+  document.getElementById('perf-goals').value=pr.goals||'';
+  populateEmpDropdown('perf-emp',pr.employee_id);
+  document.getElementById('perfMo').classList.add('open');
+}
+async function savePerf(){
+  const empId=document.getElementById('perf-emp').value;
+  if(!empId){toast('Select an employee','err');return;}
+  const editId=document.getElementById('perf-id').value;
+  const payload={
+    employee_id:empId,review_period:document.getElementById('perf-period').value||null,
+    review_date:document.getElementById('perf-date').value||null,
+    rating:parseInt(document.getElementById('perf-rating').value)||3,
+    strengths:document.getElementById('perf-strengths').value||null,
+    areas_for_improvement:document.getElementById('perf-improve').value||null,
+    goals:document.getElementById('perf-goals').value||null,
+    updated_at:new Date().toISOString(),
+  };
+  const btn=document.getElementById('perfSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    if(editId){const{error}=await db.from('hr_performance').update(payload).eq('id',editId);if(error)throw error;toast('Review updated','ok');}
+    else{const{error}=await db.from('hr_performance').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Review saved','ok');}
+    document.getElementById('perfMo').classList.remove('open');await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save review';}
+}
+async function deletePerf(){
+  const id=document.getElementById('perf-id').value;if(!id||!confirm('Delete this review?'))return;
+  const{error}=await db.from('hr_performance').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok');document.getElementById('perfMo').classList.remove('open');await loadAll();
+}
+
+// ── DARK MODE ─────────────────────────────────────────────────
+function toggleDark(){const d=document.body.classList.toggle('dark');localStorage.setItem('flowtrack-dark',d?'1':'0');updateDarkUI(d);}
+function updateDarkUI(d){const t=document.getElementById('darkTrack'),l=document.getElementById('darkLabel');if(t)t.classList.toggle('on',d);if(l)l.textContent=d?'Light mode':'Dark mode';}
+
+// ── MODAL OVERLAYS ────────────────────────────────────────────
+['empMo','leaveMo','payrollMo','perfMo'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+});
+</script>
+</body>
+</html>

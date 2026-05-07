@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowLedger — Accounting</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#F4F2ED;--surface:#FFF;--s2:#F8F7F3;--border:#E2DDD5;--border2:#CCC8BE;
+  --text:#1A1916;--t2:#6B6760;--t3:#9C9890;
+  --ink:#1A1916;--ink-fg:#F4F2ED;
+  --green:#1C6B4A;--gbg:#E8F5EE;
+  --amber:#8A5A0A;--abg:#FDF3DC;
+  --red:#8B2020;--rbg:#FDEAEA;
+  --blue:#1A3B6E;--bbg:#E8EFF9;
+  --purple:#4A2080;--pbg:#F0EAFA;
+  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:10px;--rl:16px;
+}
+body.dark{
+  --bg:#111110;--surface:#1C1B19;--s2:#242320;--border:#2E2D2A;--border2:#3D3C38;
+  --text:#F0EEE9;--t2:#A09D97;--t3:#6B6860;--ink:#F0EEE9;--ink-fg:#111110;
+  --green:#2D9E6B;--gbg:#0D2B1E;--amber:#C98A2A;--abg:#2A1E08;
+  --red:#D94F4F;--rbg:#2A0F0F;--blue:#4A7FD4;--bbg:#0D1E38;--purple:#8A5FD4;--pbg:#1A0D38;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* ── LOGIN ───────────────────────────────────────────────── */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)}
+.login-card{background:var(--surface);border-radius:20px;padding:40px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.3)}
+.login-logo{font-size:22px;font-weight:600;letter-spacing:-.5px;margin-bottom:2px}
+.login-product{font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:28px}
+.login-link{display:block;text-align:center;margin-top:16px;font-size:12px;color:var(--t3);text-decoration:none}
+.login-link:hover{color:var(--blue)}
+.li{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--surface);outline:none;margin-bottom:12px;transition:border-color .15s;display:block}
+.li:focus{border-color:var(--border2)}
+.li-label{font-size:12px;font-weight:500;color:var(--t2);margin-bottom:5px;display:block}
+.login-btn{width:100%;padding:11px;background:var(--ink);color:var(--ink-fg);border:none;border-radius:9px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;margin-top:4px}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{font-size:12px;color:var(--red);background:var(--rbg);border:1px solid #f0b0b0;border-radius:8px;padding:8px 12px;margin-top:10px;display:none}
+
+/* ── APP SHELL ───────────────────────────────────────────── */
+.app{display:flex;height:100vh;overflow:hidden}
+#appShell{display:none}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar{width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.logo-area{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-mark{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.logo-tag{font-size:10px;font-family:var(--mono);color:var(--t3);margin-top:1px}
+.nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nsec{font-size:10px;font-weight:500;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;padding:8px 10px 4px}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--t2);transition:all .15s;margin-bottom:1px;user-select:none}
+.ni:hover{background:var(--s2);color:var(--text)}
+.ni.active{background:var(--ink);color:var(--ink-fg)}
+.ni svg{width:16px;height:16px;flex-shrink:0}
+.ni-count{margin-left:auto;font-size:10px;font-family:var(--mono);background:var(--s2);color:var(--t2);padding:2px 6px;border-radius:20px}
+.ni.active .ni-count{background:rgba(255,255,255,.15);color:rgba(255,255,255,.8)}
+.sidebar-foot{padding:12px 14px;border-top:1px solid var(--border);font-size:12px;display:flex;flex-direction:column;gap:4px}
+.foot-name{font-weight:500;font-size:13px}
+.foot-app-link{font-size:11px;color:var(--blue);cursor:pointer;text-decoration:none;margin-top:2px}
+.foot-app-link:hover{text-decoration:underline}
+.logout-btn{background:none;border:none;font-family:var(--sans);font-size:11px;color:var(--t3);cursor:pointer;text-align:left;padding:0;margin-top:2px}
+.logout-btn:hover{color:var(--red)}
+.sync-row{display:flex;align-items:center;gap:5px;margin-top:3px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.sync-dot.warn{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── MAIN ─────────────────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:500;flex:1}
+.btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:7px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;color:var(--text);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--s2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-dark{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.btn-dark:hover{background:#2d2c28}
+.btn-sm{font-size:12px;padding:5px 10px;border-radius:6px}
+.btn-ghost{border-color:transparent;background:transparent}
+.btn-ghost:hover{background:var(--s2);border-color:var(--border)}
+.btn-danger{background:var(--rbg);color:var(--red);border-color:#f0b0b0}
+.vtabs{display:flex;gap:4px}
+.vtab{font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--t2);font-family:var(--sans);transition:all .15s}
+.vtab:hover{background:var(--s2)}
+.vtab.active{background:var(--surface);border-color:var(--border);color:var(--text)}
+
+/* ── KPI CARDS ───────────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 24px 0}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:18px 20px;position:relative;overflow:hidden}
+.kpi-label{font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.kpi-value{font-size:26px;font-weight:300;letter-spacing:-1px;font-family:var(--mono);line-height:1}
+.kpi-value.up{color:var(--green)}
+.kpi-value.down{color:var(--red)}
+.kpi-value.warn{color:var(--amber)}
+.kpi-sub{font-size:11px;color:var(--t3);margin-top:5px}
+.kpi-trend{position:absolute;top:16px;right:16px;font-size:11px;font-family:var(--mono);padding:3px 7px;border-radius:20px}
+.kpi-trend.pos{background:var(--gbg);color:var(--green)}
+.kpi-trend.neg{background:var(--rbg);color:var(--red)}
+
+/* ── TABLE SHARED ────────────────────────────────────────── */
+.section{padding:16px 24px 24px}
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.section-title{font-size:14px;font-weight:500}
+.twrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--s2)}
+th{text-align:left;padding:10px 14px;font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--s2)}
+.mono{font-family:var(--mono);font-size:12px}
+.empty{text-align:center;padding:40px;color:var(--t3);font-size:13px}
+.search-wrap{position:relative}
+.search-wrap input{padding:7px 12px 7px 30px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-family:var(--sans);font-size:13px;color:var(--text);outline:none;width:220px}
+.search-wrap input:focus{border-color:var(--border2)}
+.si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--t3);pointer-events:none}
+
+/* ── BADGE ───────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.b-dot{width:5px;height:5px;border-radius:50%;opacity:.6}
+.b-green{background:var(--gbg);color:var(--green)}
+.b-red{background:var(--rbg);color:var(--red)}
+.b-amber{background:var(--abg);color:var(--amber)}
+.b-blue{background:var(--bbg);color:var(--blue)}
+.b-gray{background:var(--s2);color:var(--t2);border:1px solid var(--border)}
+.b-purple{background:var(--pbg);color:var(--purple)}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.mo{display:none;position:fixed;inset:0;background:rgba(26,25,22,.55);z-index:200;align-items:center;justify-content:center;padding:20px}
+.mo.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);width:100%;max-width:600px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.18)}
+.modal.wide{max-width:800px}
+.mhd{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.mhd h3{font-size:15px;font-weight:500}
+.mclose{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:18px;line-height:1}
+.mclose:hover{background:var(--s2)}
+.mbody{padding:20px 24px}
+.fsec{margin-bottom:20px}
+.fsec-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.frow{display:flex;flex-direction:column;gap:5px}
+.frow label{font-size:12px;font-weight:500;color:var(--t2)}
+.req{color:var(--red)}
+.frow input,.frow select,.frow textarea{font-family:var(--sans);font-size:13px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:var(--border2)}
+.frow textarea{resize:vertical;min-height:70px}
+.mfoot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:var(--surface)}
+
+/* ── ACCOUNTS (Chart of Accounts) ────────────────────────── */
+.acct-type-hd{background:var(--s2);padding:8px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);border-bottom:1px solid var(--border)}
+.acct-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;gap:12px;transition:background .12s}
+.acct-row:hover{background:var(--s2)}
+.acct-row:last-child{border-bottom:none}
+.acct-code{font-family:var(--mono);font-size:11px;color:var(--t3);width:60px;flex-shrink:0}
+.acct-name{flex:1;font-weight:500}
+.acct-type{font-size:11px;color:var(--t2)}
+.acct-bal{font-family:var(--mono);font-size:13px;text-align:right;min-width:120px}
+.acct-bal.pos{color:var(--green)}
+.acct-bal.neg{color:var(--red)}
+
+/* ── JOURNAL ENTRY ───────────────────────────────────────── */
+.je-lines{margin-top:12px}
+.je-line{display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:8px;margin-bottom:8px;align-items:center}
+.je-line input,.je-line select{font-family:var(--sans);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:100%}
+.je-line input:focus,.je-line select:focus{border-color:var(--border2)}
+.je-remove{background:none;border:none;cursor:pointer;color:var(--t3);font-size:18px;line-height:1;padding:0 4px;flex-shrink:0}
+.je-remove:hover{color:var(--red)}
+.je-totals{display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:8px;padding-top:10px;border-top:1px solid var(--border);margin-top:4px;font-size:12px;font-family:var(--mono)}
+.je-total-label{text-align:right;color:var(--t2);grid-column:1}
+.je-total-val{padding:4px 10px;background:var(--s2);border-radius:6px;text-align:right;font-weight:500}
+.je-bal-ok{color:var(--green)}
+.je-bal-err{color:var(--red)}
+.je-line-hd{display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:8px;margin-bottom:6px}
+.je-line-hd span{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);padding:0 10px}
+
+/* ── INVOICES ────────────────────────────────────────────── */
+.inv-status-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.inv-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;flex:1;min-width:140px}
+.inv-stat-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.inv-stat-val{font-size:20px;font-weight:300;font-family:var(--mono)}
+
+/* ── BANK REC ─────────────────────────────────────────────── */
+.bank-match{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;transition:background .12s}
+.bank-match:hover{background:var(--s2)}
+.bank-match-check{width:16px;height:16px;border:1.5px solid var(--border2);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.bank-match.matched .bank-match-check{background:var(--green);border-color:var(--green)}
+.bank-match-desc{flex:1}
+.bank-match-date{font-family:var(--mono);font-size:11px;color:var(--t3);width:90px}
+.bank-match-amt{font-family:var(--mono);font-size:13px;font-weight:500;min-width:100px;text-align:right}
+.bank-match-amt.credit{color:var(--green)}
+.bank-match-amt.debit{color:var(--red)}
+
+/* ── DARK MODE TOGGLE ─────────────────────────────────────── */
+.dark-toggle{display:flex;align-items:center;gap:7px;background:none;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--t2);padding:0;margin-top:4px;width:100%;text-align:left}
+.dark-toggle:hover{color:var(--text)}
+.tog-track{width:28px;height:16px;border-radius:20px;background:var(--border2);position:relative;transition:background .2s;flex-shrink:0}
+.tog-track.on{background:var(--ink)}
+body.dark .tog-track.on{background:var(--text)}
+.tog-thumb{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tog-track.on .tog-thumb{transform:translateX(12px)}
+
+/* ── SPINNER ─────────────────────────────────────────────── */
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--t2);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;gap:10px;color:var(--t3);font-size:13px}
+
+/* ── TOAST ───────────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--ink-fg);font-size:13px;padding:10px 18px;border-radius:10px;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;font-family:var(--sans)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{background:var(--red)}
+.toast.ok{background:var(--green)}
+
+/* ── REPORTS ─────────────────────────────────────────────── */
+.report-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:16px;overflow:hidden}
+.report-block-hd{padding:14px 18px;background:var(--s2);border-bottom:1px solid var(--border);font-size:13px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.report-block-body{padding:16px 18px}
+.totals-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.totals-row:last-child{border-bottom:none;font-weight:600}
+.totals-row.subtotal{font-weight:600;background:var(--s2);padding:8px 12px;margin:4px -12px;border-radius:4px}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media(max-width:900px){
+  .sidebar{width:48px}
+  .logo-area,.nsec,.ni span,.sidebar-foot .sf-text,.logo-tag{display:none}
+  .ni{justify-content:center}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">FlowLedger</div>
+    <div class="login-product">Accounting · anlsco</div>
+    <label class="li-label">Email</label>
+    <input class="li" id="loginEmail" type="email" placeholder="you@anls.com" autocomplete="email">
+    <label class="li-label">Password</label>
+    <input class="li" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="loginErr"></div>
+    <a class="login-link" href="index.html">← Back to FlowSuite</a>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-mark">FlowLedger</div>
+      <div class="logo-tag">Accounting module</div>
+    </div>
+    <nav class="nav">
+      <div class="nsec">Overview</div>
+      <div class="ni active" id="nav-dashboard" onclick="showView('dashboard')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/></svg>
+        <span>Dashboard</span>
+      </div>
+      <div class="nsec">Transactions</div>
+      <div class="ni" id="nav-journal" onclick="showView('journal')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M3 8h10M3 12h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Journal entries</span>
+        <span class="ni-count" id="nc-journal">0</span>
+      </div>
+      <div class="ni" id="nav-invoices" onclick="showView('invoices')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>Invoices (AR)</span>
+        <span class="ni-count" id="nc-invoices">0</span>
+      </div>
+      <div class="ni" id="nav-bills" onclick="showView('bills')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M10 11l1.5 1.5L14 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Bills (AP)</span>
+        <span class="ni-count" id="nc-bills">0</span>
+      </div>
+      <div class="ni" id="nav-bank" onclick="showView('bank')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 6l6-4 6 4v1H2V6z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><rect x="4" y="7" width="2" height="5" fill="currentColor" opacity=".4"/><rect x="7" y="7" width="2" height="5" fill="currentColor" opacity=".7"/><rect x="10" y="7" width="2" height="5" fill="currentColor"/><path d="M1 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Bank accounts</span>
+      </div>
+      <div class="nsec">Accounting</div>
+      <div class="ni" id="nav-coa" onclick="showView('coa')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 3v10h12V3" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>Chart of accounts</span>
+      </div>
+      <div class="nsec">Contacts</div>
+      <div class="ni" id="nav-contacts" onclick="showView('contacts')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 13c0-2.76 2.24-5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M9 14c0-1.66 1.34-3 3-3s3 1.34 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span>Clients &amp; vendors</span>
+      </div>
+      <div class="nsec">Reports</div>
+      <div class="ni" id="nav-pl" onclick="showView('pl')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 13L5 9l3 2 3-4 3 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Profit &amp; Loss</span>
+      </div>
+      <div class="ni" id="nav-bs" onclick="showView('bs')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="6" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="2" width="6" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
+        <span>Balance sheet</span>
+      </div>
+      <div class="ni" id="nav-aging" onclick="showView('aging')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>AR aging</span>
+      </div>
+      <div class="ni" id="nav-tb" onclick="showView('tb')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M1 5h14M5 5v10" stroke="currentColor" stroke-width="1.2"/></svg>
+        <span>Trial balance</span>
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="sf-text">
+        <div class="foot-name" id="sf-name">—</div>
+        <div class="sync-row"><span class="sync-dot warn" id="syncDot"></span><span style="font-size:11px;color:var(--t3)" id="syncLabel">Connecting…</span></div>
+        <a class="foot-app-link" href="index.html">⌂ FlowSuite home</a>
+        <a class="foot-app-link" href="flowtrack.html">← FlowTrack</a>
+        <button class="dark-toggle" onclick="toggleDark()">
+          <span class="tog-track" id="darkTrack"><span class="tog-thumb"></span></span>
+          <span id="darkLabel">Dark mode</span>
+        </button>
+        <button class="logout-btn" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="mainArea">
+    <div class="topbar">
+      <div class="topbar-title" id="viewTitle">Dashboard</div>
+      <div class="vtabs" id="viewTabs"></div>
+      <button class="btn" onclick="loadAll()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 118 2.5c2 0 3.7 1 4.7 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+      <button class="btn btn-dark" id="primaryBtn" onclick="primaryAction()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span id="primaryBtnLabel">New entry</span>
+      </button>
+    </div>
+    <div id="viewContent"></div>
+  </main>
+</div>
+</div>
+
+<!-- ── JOURNAL ENTRY MODAL ─────────────────────────────────────── -->
+<div class="mo" id="jeMo">
+  <div class="modal wide">
+    <div class="mhd"><h3 id="jeTitle">New journal entry</h3><button class="mclose" onclick="closeJE()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="je-id">
+      <div class="fg" style="margin-bottom:14px">
+        <div class="frow"><label>Date <span class="req">*</span></label><input id="je-date" type="date"></div>
+        <div class="frow"><label>Reference</label><input id="je-ref" placeholder="e.g. JE-001"></div>
+        <div class="frow" style="grid-column:1/-1"><label>Description <span class="req">*</span></label><input id="je-desc" placeholder="Brief description of this entry"></div>
+      </div>
+      <div class="fsec-title" style="margin-bottom:10px">Debit / Credit lines</div>
+      <div class="je-line-hd">
+        <span>Account</span><span style="text-align:right">Debit (SAR)</span><span style="text-align:right">Credit (SAR)</span><span></span>
+      </div>
+      <div id="jeLines"></div>
+      <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addJELine()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add line
+      </button>
+      <div class="je-totals" id="jeTotals"></div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="jeDeleteBtn" style="display:none" onclick="deleteJE()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeJE()">Cancel</button>
+        <button class="btn btn-dark" id="jeSaveBtn" onclick="saveJE()">Post entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── INVOICE MODAL ───────────────────────────────────────────── -->
+<div class="mo" id="invMo">
+  <div class="modal wide">
+    <div class="mhd"><h3 id="invTitle">New invoice</h3><button class="mclose" onclick="closeInvModal()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="inv-id">
+      <div class="fg">
+        <div class="frow"><label>Invoice # <span class="req">*</span></label><input id="inv-num" placeholder="INV-2026-001"></div>
+        <div class="frow"><label>Client <span class="req">*</span></label>
+          <div style="display:flex;gap:6px">
+            <select id="inv-client-id" style="flex:1" onchange="setContactFromSelect('inv-client-id','inv-client')"><option value="">Select client…</option></select>
+            <input id="inv-client" placeholder="Or type name" style="flex:1">
+            <button class="btn btn-sm" onclick="openNewContact('client')" title="Add new client" type="button">+</button>
+          </div>
+        </div>
+        <div class="frow"><label>Issue date</label><input id="inv-date" type="date"></div>
+        <div class="frow"><label>Due date</label><input id="inv-due" type="date"></div>
+        <div class="frow"><label>Amount (SAR) <span class="req">*</span></label><input id="inv-amount" type="number" min="0" placeholder="0"></div>
+        <div class="frow"><label>VAT (15%)</label><input id="inv-vat" type="number" min="0" placeholder="0" readonly style="background:var(--s2)"></div>
+        <div class="frow"><label>Status</label>
+          <select id="inv-status">
+            <option value="Draft">Draft</option>
+            <option value="Sent">Sent</option>
+            <option value="Partial">Partial payment</option>
+            <option value="Paid">Paid</option>
+            <option value="Overdue">Overdue</option>
+            <option value="Void">Void</option>
+          </select>
+        </div>
+        <div class="frow"><label>Amount paid (SAR)</label><input id="inv-paid" type="number" min="0" placeholder="0"></div>
+        <div class="frow"><label>Linked PO</label><input id="inv-po" placeholder="PO-2026-001"></div>
+        <div class="frow"><label>Currency</label>
+          <select id="inv-currency"><option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option></select>
+        </div>
+      </div>
+      <div class="frow" style="margin-top:12px"><label>Notes</label><textarea id="inv-notes" placeholder="Payment terms, bank details, etc."></textarea></div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="invDeleteBtn" style="display:none" onclick="deleteInv()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeInvModal()">Cancel</button>
+        <button class="btn btn-dark" id="invSaveBtn" onclick="saveInv()">Save invoice</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── BILL MODAL ──────────────────────────────────────────────── -->
+<div class="mo" id="billMo">
+  <div class="modal">
+    <div class="mhd"><h3 id="billTitle">New bill</h3><button class="mclose" onclick="closeBillModal()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="bill-id">
+      <div class="fg">
+        <div class="frow"><label>Bill # <span class="req">*</span></label><input id="bill-num" placeholder="BILL-001"></div>
+        <div class="frow"><label>Vendor <span class="req">*</span></label>
+          <div style="display:flex;gap:6px">
+            <select id="bill-vendor-id" style="flex:1" onchange="setContactFromSelect('bill-vendor-id','bill-vendor')"><option value="">Select vendor…</option></select>
+            <input id="bill-vendor" placeholder="Or type name" style="flex:1">
+            <button class="btn btn-sm" onclick="openNewContact('vendor')" title="Add new vendor" type="button">+</button>
+          </div>
+        </div>
+        <div class="frow"><label>Bill date</label><input id="bill-date" type="date"></div>
+        <div class="frow"><label>Due date</label><input id="bill-due" type="date"></div>
+        <div class="frow"><label>Amount (SAR) <span class="req">*</span></label><input id="bill-amount" type="number" min="0" placeholder="0"></div>
+        <div class="frow"><label>Category</label>
+          <select id="bill-cat">
+            <option>Rent</option><option>Utilities</option><option>Salaries</option>
+            <option>Materials</option><option>Services</option><option>Insurance</option>
+            <option>Equipment</option><option>Travel</option><option>Other</option>
+          </select>
+        </div>
+        <div class="frow"><label>Status</label>
+          <select id="bill-status">
+            <option value="Unpaid">Unpaid</option><option value="Partial">Partial</option>
+            <option value="Paid">Paid</option><option value="Void">Void</option>
+          </select>
+        </div>
+        <div class="frow"><label>Amount paid (SAR)</label><input id="bill-paid" type="number" min="0" placeholder="0"></div>
+      </div>
+      <div class="frow" style="margin-top:12px"><label>Notes</label><textarea id="bill-notes" placeholder="Any notes…"></textarea></div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="billDeleteBtn" style="display:none" onclick="deleteBill()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeBillModal()">Cancel</button>
+        <button class="btn btn-dark" id="billSaveBtn" onclick="saveBill()">Save bill</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── BANK TRANSACTION MODAL ──────────────────────────────────── -->
+<div class="mo" id="bankMo">
+  <div class="modal">
+    <div class="mhd"><h3 id="bankTitle">Add transaction</h3><button class="mclose" onclick="closeBankModal()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="bank-id">
+      <div class="fg">
+        <div class="frow"><label>Date <span class="req">*</span></label><input id="bank-date" type="date"></div>
+        <div class="frow"><label>Type</label>
+          <select id="bank-type">
+            <option value="credit">Credit (money in)</option>
+            <option value="debit">Debit (money out)</option>
+          </select>
+        </div>
+        <div class="frow" style="grid-column:1/-1"><label>Description <span class="req">*</span></label><input id="bank-desc" placeholder="e.g. Client payment received"></div>
+        <div class="frow"><label>Amount (SAR) <span class="req">*</span></label><input id="bank-amount" type="number" min="0" placeholder="0"></div>
+        <div class="frow"><label>Account</label><input id="bank-account" placeholder="e.g. ANB Current Account" value="ANB Current Account"></div>
+        <div class="frow"><label>Reference</label><input id="bank-ref" placeholder="Cheque #, transfer ref…"></div>
+        <div class="frow"><label>Reconciled</label>
+          <select id="bank-reconciled"><option value="false">Unreconciled</option><option value="true">Reconciled</option></select>
+        </div>
+        <div class="frow"><label>Matched invoice/bill</label><input id="bank-matched" placeholder="INV-001 or BILL-001"></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="bankDeleteBtn" style="display:none" onclick="deleteBankTx()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeBankModal()">Cancel</button>
+        <button class="btn btn-dark" id="bankSaveBtn" onclick="saveBankTx()">Save transaction</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── COA MODAL ───────────────────────────────────────────────── -->
+<div class="mo" id="coaMo">
+  <div class="modal" style="max-width:520px">
+    <div class="mhd"><h3 id="coaTitle">New account</h3><button class="mclose" onclick="closeCOA()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="coa-id">
+      <div class="fg">
+        <div class="frow"><label>Account code <span class="req">*</span></label><input id="coa-code" placeholder="1001"></div>
+        <div class="frow"><label>Account name <span class="req">*</span></label><input id="coa-name" placeholder="Cash and cash equivalents"></div>
+        <div class="frow"><label>Type <span class="req">*</span></label>
+          <select id="coa-type" onchange="filterParentAccounts()">
+            <option>Asset</option><option>Liability</option><option>Equity</option>
+            <option>Revenue</option><option>Expense</option>
+          </select>
+        </div>
+        <div class="frow"><label>Sub-type</label><input id="coa-subtype" placeholder="e.g. Current asset"></div>
+        <div class="frow" style="grid-column:1/-1">
+          <label>Parent account <span style="font-size:11px;color:var(--t3);font-weight:400">(optional — creates a sub-account)</span></label>
+          <select id="coa-parent"><option value="">None (top-level account)</option></select>
+        </div>
+        <div class="frow" style="grid-column:1/-1"><label>Description</label><textarea id="coa-desc" style="min-height:50px" placeholder="Optional description"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="coaDeleteBtn" style="display:none" onclick="deleteCOA()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeCOA()">Cancel</button>
+        <button class="btn btn-dark" onclick="saveCOA()">Save account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONTACTS MODAL ──────────────────────────────────────────── -->
+<div class="mo" id="contactMo">
+  <div class="modal" style="max-width:520px">
+    <div class="mhd"><h3 id="contactTitle">Add contact</h3><button class="mclose" onclick="closeContact()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="ct-id">
+      <div class="fg">
+        <div class="frow"><label>Name <span class="req">*</span></label><input id="ct-name" placeholder="Company or person name"></div>
+        <div class="frow"><label>Type</label>
+          <select id="ct-type"><option value="client">Client</option><option value="vendor">Vendor</option><option value="both">Both</option></select>
+        </div>
+        <div class="frow"><label>Email</label><input id="ct-email" type="email" placeholder="contact@company.com"></div>
+        <div class="frow"><label>Phone</label><input id="ct-phone" placeholder="+966 5X XXX XXXX"></div>
+        <div class="frow"><label>VAT number</label><input id="ct-vat" placeholder="VAT registration #"></div>
+        <div class="frow"><label>CR number</label><input id="ct-cr" placeholder="Commercial registration #"></div>
+        <div class="frow" style="grid-column:1/-1"><label>Address</label><textarea id="ct-address" style="min-height:50px" placeholder="Full address…"></textarea></div>
+        <div class="frow" style="grid-column:1/-1"><label>Notes</label><textarea id="ct-notes" style="min-height:40px" placeholder="Any notes…"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="ctDeleteBtn" style="display:none" onclick="deleteContact()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeContact()">Cancel</button>
+        <button class="btn btn-dark" id="ctSaveBtn" onclick="saveContact()">Save contact</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const SUPA_URL = 'https://pqcjhdrvqzcsvddimwaq.supabase.co';
+const SUPA_KEY = 'sb_publishable_Que35EYrhPKCFzQuz9Okog_QkU0fbmh';
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'flowsuite-auth',   // same key on ALL pages = shared session
+    storage: window.localStorage,
+  }
+});
+
+// ── SESSION RESTORE FROM URL HASH (for file:// protocol) ─────
+(async function restoreSessionFromHash() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return;
+  const params = new URLSearchParams(hash);
+  const access_token  = params.get('access_token');
+  const refresh_token = params.get('refresh_token');
+  if (!access_token || !refresh_token) return;
+  // Set the session using the tokens from the URL
+  await db.auth.setSession({ access_token, refresh_token });
+  // Clean the hash from the URL
+  history.replaceState(null, '', window.location.pathname);
+})();
+
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let currentUser = null;
+let currentView = 'dashboard';
+let accounts = [];    // Chart of accounts
+let journalEntries = [];
+let invoices = [];
+let bills = [];
+let bankTxs = [];
+let contacts = [];    // Clients & vendors
+
+const VIEW_TITLES = {
+  dashboard:'Dashboard', journal:'Journal entries', invoices:'Invoices (AR)',
+  bills:'Bills (AP)', bank:'Bank accounts', coa:'Chart of accounts',
+  pl:'Profit & Loss', bs:'Balance sheet', aging:'AR aging report',
+  contacts:'Clients & vendors', tb:'Trial balance',
+};
+const PRIMARY_LABELS = {
+  dashboard:'New entry', journal:'New entry', invoices:'New invoice',
+  bills:'New bill', bank:'Add transaction', coa:'New account',
+  pl:'Export', bs:'Export', aging:'Export',
+  contacts:'Add contact', tb:'Export',
+};
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type?' '+type:'');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className='toast', 2800);
+}
+function setSync(s) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot' + (s==='ok'?'':s==='err'?' err':' warn');
+  lbl.textContent = s==='ok'?'Synced':s==='err'?'Error':'Syncing…';
+}
+function fmt(n, decimals=0) {
+  if (n===null||n===undefined||n==='') return '—';
+  return Number(n).toLocaleString('en-SA', {minimumFractionDigits:decimals, maximumFractionDigits:decimals});
+}
+function fmtSAR(n) { return 'SAR '+fmt(n,2); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function daysAgo(d) { return d ? Math.floor((new Date()-new Date(d))/86400000) : 0; }
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginErr');
+  if (!email||!pass) { showErr('Enter email and password.'); return; }
+  btn.disabled=true; btn.textContent='Signing in…'; err.style.display='none';
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email, password:pass });
+    if (error) throw error;
+    // Check role
+    const { data: profile } = await db.from('profiles').select('role,full_name').eq('id',data.user.id).single();
+    if (profile?.role === 'operations') throw new Error('Accounting access requires Finance or Admin role.');
+    currentUser = data.user;
+    document.getElementById('sf-name').textContent = profile?.full_name || email;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('appShell').style.display='block';
+    await loadAll();
+  } catch(e) {
+    showErr(e.message);
+    btn.disabled=false; btn.textContent='Sign in';
+  }
+}
+function showErr(msg) {
+  const el = document.getElementById('loginErr');
+  el.textContent=msg; el.style.display='block';
+}
+async function doLogout() {
+  await db.auth.signOut();
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('loginPass').value='';
+}
+(async()=>{
+  const { data:{session} } = await db.auth.getSession();
+  if (session?.user) {
+    const { data:profile } = await db.from('profiles').select('role,full_name').eq('id',session.user.id).single();
+    if (profile?.role!=='operations') {
+      currentUser=session.user;
+      document.getElementById('sf-name').textContent=profile?.full_name||session.user.email;
+      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('appShell').style.display='block';
+      await loadAll();
+    }
+  }
+  document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
+  // Restore dark mode
+  if(localStorage.getItem('flowtrack-dark')==='1'){document.body.classList.add('dark');updateDarkUI(true);}
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════════════════════════════
+async function loadAll() {
+  setSync('loading');
+  try {
+    const [acctRes,jeRes,invRes,billRes,bankRes,ctRes] = await Promise.all([
+      db.from('accounts').select('*').order('code'),
+      db.from('journal_entries').select('*').order('date',{ascending:false}),
+      db.from('ledger_invoices').select('*').order('issue_date',{ascending:false}),
+      db.from('ledger_bills').select('*').order('bill_date',{ascending:false}),
+      db.from('bank_transactions').select('*').order('date',{ascending:false}),
+      db.from('contacts').select('*').order('name'),
+    ]);
+    accounts      = acctRes.data  || [];
+    journalEntries= jeRes.data    || [];
+    invoices      = invRes.data   || [];
+    bills         = billRes.data  || [];
+    bankTxs       = bankRes.data  || [];
+    contacts      = ctRes.data    || [];
+    setSync('ok');
+    updateNavCounts();
+    render();
+  } catch(e) {
+    setSync('err');
+    toast('Load failed: '+e.message,'err');
+  }
+}
+
+function updateNavCounts() {
+  document.getElementById('nc-journal').textContent  = journalEntries.length;
+  document.getElementById('nc-invoices').textContent = invoices.filter(i=>i.status!=='Paid'&&i.status!=='Void').length;
+  document.getElementById('nc-bills').textContent    = bills.filter(b=>b.status==='Unpaid'||b.status==='Partial').length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIEW ROUTING
+// ═══════════════════════════════════════════════════════════════
+function showView(v) {
+  currentView=v;
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  const ni=document.getElementById('nav-'+v); if(ni) ni.classList.add('active');
+  document.getElementById('viewTitle').textContent = VIEW_TITLES[v]||v;
+  document.getElementById('primaryBtnLabel').textContent = PRIMARY_LABELS[v]||'New';
+  render();
+}
+function primaryAction() {
+  const map={journal:openJE,invoices:openNewInv,bills:openNewBill,bank:openNewBankTx,coa:openNewCOA,
+    dashboard:openJE, pl:exportReport, bs:exportReport, aging:exportReport,
+    contacts:openNewContact, tb:exportReport};
+  (map[currentView]||openJE)();
+}
+function render() {
+  const vc = document.getElementById('viewContent');
+  const views = {
+    dashboard: renderDashboard, journal: renderJournal, invoices: renderInvoices,
+    bills: renderBills, bank: renderBank, coa: renderCOA,
+    pl: renderPL, bs: renderBS, aging: renderAging,
+    contacts: renderContacts, tb: renderTrialBalance,
+  };
+  (views[currentView]||renderDashboard)(vc);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderDashboard(container) {
+  const totalAR   = invoices.filter(i=>i.status!=='Paid'&&i.status!=='Void').reduce((s,i)=>s+(i.amount||0),0);
+  const totalAP   = bills.filter(b=>b.status==='Unpaid'||b.status==='Partial').reduce((s,b)=>s+(b.amount||0),0);
+  const bankBal   = bankTxs.reduce((s,t)=>s+(t.type==='credit'?1:-1)*(t.amount||0),0);
+  const overdueAR = invoices.filter(i=>i.status==='Overdue').reduce((s,i)=>s+((i.amount||0)-(i.amount_paid||0)),0);
+  const recentJE  = journalEntries.slice(0,5);
+  const recentInv = invoices.slice(0,5);
+
+  container.innerHTML = `
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Accounts receivable</div><div class="kpi-value up">${fmt(totalAR,0)}</div><div class="kpi-sub">SAR — outstanding</div></div>
+    <div class="kpi"><div class="kpi-label">Accounts payable</div><div class="kpi-value warn">${fmt(totalAP,0)}</div><div class="kpi-sub">SAR — to be paid</div></div>
+    <div class="kpi"><div class="kpi-label">Bank balance</div><div class="kpi-value ${bankBal>=0?'up':'down'}">${fmt(bankBal,0)}</div><div class="kpi-sub">SAR — all accounts</div></div>
+    <div class="kpi"><div class="kpi-label">Overdue invoices</div><div class="kpi-value ${overdueAR>0?'down':''}">${fmt(overdueAR,0)}</div><div class="kpi-sub">SAR — needs attention</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 24px">
+    <div class="report-block">
+      <div class="report-block-hd">Recent journal entries <button class="btn btn-sm" onclick="showView('journal')">View all</button></div>
+      <div class="report-block-body" style="padding:0">
+        ${recentJE.length ? recentJE.map(je=>`
+          <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;gap:10px;cursor:pointer" onclick="openEditJE('${je.id}')" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">
+            <span class="mono" style="color:var(--t3);width:90px;flex-shrink:0">${je.date||'—'}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${je.description||'—'}</span>
+            <span class="badge b-green">Posted</span>
+          </div>`).join('') : '<div class="empty">No entries yet</div>'}
+      </div>
+    </div>
+    <div class="report-block">
+      <div class="report-block-hd">Recent invoices <button class="btn btn-sm" onclick="showView('invoices')">View all</button></div>
+      <div class="report-block-body" style="padding:0">
+        ${recentInv.length ? recentInv.map(inv=>`
+          <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;gap:10px;cursor:pointer" onclick="openEditInv('${inv.id}')" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">
+            <span class="mono" style="color:var(--t3);width:90px;flex-shrink:0">${inv.invoice_num||'—'}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inv.client||'—'}</span>
+            <span style="font-family:var(--mono);font-size:12px;min-width:80px;text-align:right">${fmt(inv.amount,0)}</span>
+            ${invStatusBadge(inv.status)}
+          </div>`).join('') : '<div class="empty">No invoices yet</div>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// JOURNAL ENTRIES
+// ═══════════════════════════════════════════════════════════════
+function renderJournal(container) {
+  container.innerHTML = `
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">All journal entries (${journalEntries.length})</div>
+      <div class="search-wrap">
+        <svg class="si" width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10 10l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input type="text" placeholder="Search entries…" oninput="filterJournal(this.value)">
+      </div>
+    </div>
+    <div class="twrap">
+      <table>
+        <thead><tr><th>Date</th><th>Reference</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="jeTbody"></tbody>
+      </table>
+      <div id="jeEmpty" class="empty" style="display:none">No journal entries yet. Click "New entry" to post your first.</div>
+    </div>
+  </div>`;
+  filterJournal('');
+}
+function filterJournal(q) {
+  const tbody = document.getElementById('jeTbody');
+  const empty = document.getElementById('jeEmpty');
+  if (!tbody) return;
+  const filtered = journalEntries.filter(je=>!q||[je.description,je.reference].some(v=>(v||'').toLowerCase().includes(q.toLowerCase())));
+  if (!filtered.length) { tbody.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display='none';
+  tbody.innerHTML = filtered.map(je=>{
+    const lines = je.lines ? (typeof je.lines==='string'?JSON.parse(je.lines):je.lines) : [];
+    const totalDr = lines.reduce((s,l)=>s+(parseFloat(l.debit)||0),0);
+    const totalCr = lines.reduce((s,l)=>s+(parseFloat(l.credit)||0),0);
+    return`<tr>
+      <td class="mono">${je.date||'—'}</td>
+      <td class="mono" style="color:var(--t3)">${je.reference||'—'}</td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${je.description||'—'}</td>
+      <td class="mono" style="text-align:right;color:var(--blue)">${fmt(totalDr,2)}</td>
+      <td class="mono" style="text-align:right;color:var(--green)">${fmt(totalCr,2)}</td>
+      <td><span class="badge b-green"><span class="b-dot" style="background:currentColor"></span>Posted</span></td>
+      <td><button class="btn btn-sm btn-ghost" onclick="openEditJE('${je.id}')">Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+
+let jeLineCount = 0;
+function openJE() {
+  document.getElementById('je-id').value='';
+  document.getElementById('jeTitle').textContent='New journal entry';
+  document.getElementById('jeDeleteBtn').style.display='none';
+  document.getElementById('je-date').value=today();
+  document.getElementById('je-ref').value='JE-'+(String(journalEntries.length+1).padStart(3,'0'));
+  document.getElementById('je-desc').value='';
+  jeLineCount=0;
+  document.getElementById('jeLines').innerHTML='';
+  addJELine(); addJELine();
+  updateJETotals();
+  document.getElementById('jeMo').classList.add('open');
+}
+function openEditJE(id) {
+  const je=journalEntries.find(x=>x.id===id); if(!je) return;
+  document.getElementById('je-id').value=je.id;
+  document.getElementById('jeTitle').textContent='Edit journal entry';
+  document.getElementById('jeDeleteBtn').style.display='';
+  document.getElementById('je-date').value=je.date||'';
+  document.getElementById('je-ref').value=je.reference||'';
+  document.getElementById('je-desc').value=je.description||'';
+  jeLineCount=0;
+  document.getElementById('jeLines').innerHTML='';
+  const lines=je.lines?(typeof je.lines==='string'?JSON.parse(je.lines):je.lines):[];
+  lines.forEach(l=>addJELine(l));
+  if(lines.length<2) addJELine();
+  updateJETotals();
+  document.getElementById('jeMo').classList.add('open');
+}
+function closeJE(){document.getElementById('jeMo').classList.remove('open');}
+function addJELine(data={}) {
+  const id=jeLineCount++;
+  const opts=accounts.map(a=>`<option value="${a.id}" ${data.account_id===a.id?'selected':''}>${a.code} — ${a.name}</option>`).join('');
+  const div=document.createElement('div'); div.className='je-line'; div.id='jeline-'+id;
+  div.innerHTML=`
+    <select onchange="updateJETotals()"><option value="">Select account…</option>${opts}</select>
+    <input type="number" min="0" placeholder="0.00" value="${data.debit||''}" oninput="updateJETotals()" style="text-align:right">
+    <input type="number" min="0" placeholder="0.00" value="${data.credit||''}" oninput="updateJETotals()" style="text-align:right">
+    <button class="je-remove" onclick="document.getElementById('jeline-${id}').remove();updateJETotals()">×</button>`;
+  document.getElementById('jeLines').appendChild(div);
+}
+function updateJETotals() {
+  const lines=document.querySelectorAll('#jeLines .je-line');
+  let dr=0,cr=0;
+  lines.forEach(l=>{
+    const inputs=l.querySelectorAll('input[type=number]');
+    dr+=parseFloat(inputs[0]?.value)||0;
+    cr+=parseFloat(inputs[1]?.value)||0;
+  });
+  const bal=Math.abs(dr-cr)<0.01;
+  document.getElementById('jeTotals').innerHTML=`
+    <div></div>
+    <div class="je-total-val">${fmt(dr,2)}</div>
+    <div class="je-total-val">${fmt(cr,2)}</div>
+    <div style="font-size:11px;padding-top:4px" class="${bal?'je-bal-ok':'je-bal-err'}">${bal?'✓ Balanced':'✗ Off by '+fmt(Math.abs(dr-cr),2)}</div>`;
+}
+async function saveJE() {
+  const date=document.getElementById('je-date').value;
+  const desc=document.getElementById('je-desc').value.trim();
+  if(!date||!desc){toast('Date and description required','err');return;}
+  const lines=[];
+  document.querySelectorAll('#jeLines .je-line').forEach(l=>{
+    const sel=l.querySelector('select');
+    const inputs=l.querySelectorAll('input[type=number]');
+    const dr=parseFloat(inputs[0]?.value)||0;
+    const cr=parseFloat(inputs[1]?.value)||0;
+    if(sel.value&&(dr||cr)) lines.push({account_id:sel.value,debit:dr,credit:cr});
+  });
+  if(lines.length<2){toast('Add at least 2 lines','err');return;}
+  const totalDr=lines.reduce((s,l)=>s+l.debit,0);
+  const totalCr=lines.reduce((s,l)=>s+l.credit,0);
+  if(Math.abs(totalDr-totalCr)>0.01){toast('Entry must balance (debits = credits)','err');return;}
+  const editId=document.getElementById('je-id').value;
+  const payload={date,reference:document.getElementById('je-ref').value,description:desc,lines:JSON.stringify(lines),updated_at:new Date().toISOString()};
+  const btn=document.getElementById('jeSaveBtn'); btn.disabled=true; btn.textContent='Saving…';
+  try {
+    if(editId){const{error}=await db.from('journal_entries').update(payload).eq('id',editId);if(error)throw error;toast('Entry updated','ok');}
+    else{const{error}=await db.from('journal_entries').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Entry posted','ok');}
+    closeJE(); await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Post entry';}
+}
+async function deleteJE(){
+  const id=document.getElementById('je-id').value; if(!id||!confirm('Delete this entry?'))return;
+  const{error}=await db.from('journal_entries').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok'); closeJE(); await loadAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVOICES (AR)
+// ═══════════════════════════════════════════════════════════════
+const INV_STATUS_COLORS={'Draft':'b-gray','Sent':'b-blue','Partial':'b-amber','Paid':'b-green','Overdue':'b-red','Void':'b-gray'};
+function invStatusBadge(s){return`<span class="badge ${INV_STATUS_COLORS[s]||'b-gray'}"><span class="b-dot" style="background:currentColor"></span>${s||'—'}</span>`;}
+
+function renderInvoices(container) {
+  const unpaid=invoices.filter(i=>i.status!=='Paid'&&i.status!=='Void');
+  const totalUnpaid=unpaid.reduce((s,i)=>s+(i.amount||0),0);
+  const totalOverdue=invoices.filter(i=>i.status==='Overdue').reduce((s,i)=>s+((i.amount||0)-(i.amount_paid||0)),0);
+  const totalPaid=invoices.filter(i=>i.status==='Paid').reduce((s,i)=>s+(i.amount||0),0);
+  container.innerHTML=`
+  <div class="inv-status-bar" style="padding:16px 24px 0">
+    <div class="inv-stat"><div class="inv-stat-label">Outstanding</div><div class="inv-stat-val" style="color:var(--amber)">${fmt(totalUnpaid,0)} <span style="font-size:12px;color:var(--t3)">SAR</span></div></div>
+    <div class="inv-stat"><div class="inv-stat-label">Overdue</div><div class="inv-stat-val" style="color:var(--red)">${fmt(totalOverdue,0)} <span style="font-size:12px;color:var(--t3)">SAR</span></div></div>
+    <div class="inv-stat"><div class="inv-stat-label">Paid (all time)</div><div class="inv-stat-val" style="color:var(--green)">${fmt(totalPaid,0)} <span style="font-size:12px;color:var(--t3)">SAR</span></div></div>
+    <div class="inv-stat"><div class="inv-stat-label">Total invoices</div><div class="inv-stat-val">${invoices.length}</div></div>
+  </div>
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">All invoices</div>
+      <div style="display:flex;gap:8px">
+        <select class="btn btn-sm" style="padding:5px 10px;font-size:12px" onchange="renderInvoicesTable(this.value)">
+          <option value="">All statuses</option>
+          <option>Draft</option><option>Sent</option><option>Partial</option>
+          <option>Paid</option><option>Overdue</option><option>Void</option>
+        </select>
+      </div>
+    </div>
+    <div class="twrap">
+      <table>
+        <thead><tr><th>Invoice #</th><th>Client</th><th>Issue date</th><th>Due date</th><th style="text-align:right">Amount</th><th style="text-align:right">Balance</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="invTbody"></tbody>
+      </table>
+      <div id="invEmpty" class="empty" style="display:none">No invoices yet.</div>
+    </div>
+  </div>`;
+  renderInvoicesTable('');
+}
+function renderInvoicesTable(filter) {
+  const tbody=document.getElementById('invTbody'),empty=document.getElementById('invEmpty'); if(!tbody)return;
+  const filtered=filter?invoices.filter(i=>i.status===filter):invoices;
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='';return;}
+  empty.style.display='none';
+  tbody.innerHTML=filtered.map(inv=>{
+    const balance=(inv.amount||0)-(inv.amount_paid||0);
+    const overdue=inv.due_date&&new Date(inv.due_date)<new Date()&&inv.status!=='Paid'&&inv.status!=='Void';
+    return`<tr>
+      <td class="mono">${inv.invoice_num||'—'}</td>
+      <td style="font-weight:500">${inv.client||'—'}</td>
+      <td class="mono">${inv.issue_date||'—'}</td>
+      <td class="mono" style="${overdue?'color:var(--red)':''}">${inv.due_date||'—'}</td>
+      <td class="mono" style="text-align:right">${fmt(inv.amount,2)}</td>
+      <td class="mono" style="text-align:right;color:${balance>0?'var(--amber)':'var(--green)'}">${fmt(balance,2)}</td>
+      <td>${invStatusBadge(inv.status)}</td>
+      <td><button class="btn btn-sm btn-ghost" onclick="openEditInv('${inv.id}')">Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+function openNewInv(){
+  document.getElementById('inv-id').value='';
+  document.getElementById('invTitle').textContent='New invoice';
+  document.getElementById('invDeleteBtn').style.display='none';
+  ['inv-num','inv-client','inv-amount','inv-vat','inv-paid','inv-po','inv-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  populateContactDropdowns();
+  document.getElementById('inv-date').value=today();
+  const d=new Date(); d.setDate(d.getDate()+30);
+  document.getElementById('inv-due').value=d.toISOString().split('T')[0];
+  document.getElementById('inv-status').value='Draft';
+  document.getElementById('inv-currency').value='SAR';
+  document.getElementById('inv-num').value='INV-'+(new Date().getFullYear())+'-'+(String(invoices.length+1).padStart(3,'0'));
+  document.getElementById('invMo').classList.add('open');
+}
+function openEditInv(id){
+  const inv=invoices.find(x=>x.id===id); if(!inv)return;
+  document.getElementById('inv-id').value=inv.id;
+  document.getElementById('invTitle').textContent='Edit invoice';
+  document.getElementById('invDeleteBtn').style.display='';
+  const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  set('inv-num',inv.invoice_num);set('inv-client',inv.client);set('inv-date',inv.issue_date);
+  set('inv-due',inv.due_date);set('inv-amount',inv.amount);set('inv-vat',inv.vat_amount);
+  set('inv-paid',inv.amount_paid);set('inv-po',inv.linked_po);set('inv-notes',inv.notes);
+  document.getElementById('inv-status').value=inv.status||'Draft';
+  document.getElementById('inv-currency').value=inv.currency||'SAR';
+  document.getElementById('invMo').classList.add('open');
+}
+function closeInvModal(){document.getElementById('invMo').classList.remove('open');}
+// Auto-calc VAT
+document.addEventListener('input',e=>{
+  if(e.target.id==='inv-amount'){
+    const vat=parseFloat(e.target.value)||0;
+    document.getElementById('inv-vat').value=(vat*0.15).toFixed(2);
+  }
+});
+async function saveInv(){
+  const num=document.getElementById('inv-num').value.trim();
+  const client=document.getElementById('inv-client').value.trim();
+  const amount=parseFloat(document.getElementById('inv-amount').value)||0;
+  if(!num||!client||!amount){toast('Invoice #, client and amount required','err');return;}
+  const editId=document.getElementById('inv-id').value;
+  const payload={
+    invoice_num:num,client,issue_date:document.getElementById('inv-date').value||null,
+    due_date:document.getElementById('inv-due').value||null,amount,
+    vat_amount:parseFloat(document.getElementById('inv-vat').value)||0,
+    amount_paid:parseFloat(document.getElementById('inv-paid').value)||0,
+    status:document.getElementById('inv-status').value,
+    currency:document.getElementById('inv-currency').value,
+    linked_po:document.getElementById('inv-po').value||null,
+    notes:document.getElementById('inv-notes').value||null,
+    updated_at:new Date().toISOString(),
+  };
+  const btn=document.getElementById('invSaveBtn'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    let invId = editId;
+    if(editId){
+      const{error}=await db.from('ledger_invoices').update(payload).eq('id',editId);
+      if(error)throw error;toast('Invoice updated','ok');
+    } else {
+      const{data,error}=await db.from('ledger_invoices').insert({...payload,created_at:new Date().toISOString()}).select().single();
+      if(error)throw error;invId=data.id;toast('Invoice created','ok');
+    }
+    // Auto journal entry: Dr Accounts Receivable / Cr Service Revenue
+    if(payload.status!=='Draft'&&payload.status!=='Void'){
+      await postAutoJournal(
+        `Invoice ${payload.invoice_num} — ${payload.client}`,
+        payload.invoice_num,
+        [
+          {code:'1100', debit:payload.amount, credit:0},  // Dr AR
+          {code:'4001', debit:0, credit:payload.amount},  // Cr Revenue
+        ]
+      );
+      if(payload.vat_amount>0){
+        await postAutoJournal(
+          `VAT on invoice ${payload.invoice_num}`,
+          payload.invoice_num+'-VAT',
+          [
+            {code:'1100', debit:payload.vat_amount, credit:0},
+            {code:'2100', debit:0, credit:payload.vat_amount},
+          ]
+        );
+      }
+    }
+    // Cross-module sync to FlowTrack
+    await syncInvoiceToFlowTrack(payload);
+    closeInvModal(); await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save invoice';}
+}
+async function deleteInv(){
+  const id=document.getElementById('inv-id').value; if(!id||!confirm('Delete this invoice?'))return;
+  const{error}=await db.from('ledger_invoices').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok'); closeInvModal(); await loadAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BILLS (AP)
+// ═══════════════════════════════════════════════════════════════
+function renderBills(container){
+  const unpaid=bills.filter(b=>b.status==='Unpaid'||b.status==='Partial');
+  const totalUnpaid=unpaid.reduce((s,b)=>s+(b.amount||0),0);
+  container.innerHTML=`
+  <div class="inv-status-bar" style="padding:16px 24px 0">
+    <div class="inv-stat"><div class="inv-stat-label">Total unpaid</div><div class="inv-stat-val" style="color:var(--amber)">${fmt(totalUnpaid,0)} <span style="font-size:12px;color:var(--t3)">SAR</span></div></div>
+    <div class="inv-stat"><div class="inv-stat-label">Open bills</div><div class="inv-stat-val">${unpaid.length}</div></div>
+    <div class="inv-stat"><div class="inv-stat-label">Total bills</div><div class="inv-stat-val">${bills.length}</div></div>
+  </div>
+  <div class="section">
+    <div class="section-hd"><div class="section-title">All bills</div></div>
+    <div class="twrap"><table>
+      <thead><tr><th>Bill #</th><th>Vendor</th><th>Date</th><th>Due</th><th>Category</th><th style="text-align:right">Amount</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${bills.map(b=>{
+        const overdue=b.due_date&&new Date(b.due_date)<new Date()&&b.status!=='Paid';
+        return`<tr>
+          <td class="mono">${b.bill_num||'—'}</td>
+          <td style="font-weight:500">${b.vendor||'—'}</td>
+          <td class="mono">${b.bill_date||'—'}</td>
+          <td class="mono" style="${overdue?'color:var(--red)':''}">${b.due_date||'—'}</td>
+          <td><span class="badge b-gray">${b.category||'—'}</span></td>
+          <td class="mono" style="text-align:right">${fmt(b.amount,2)}</td>
+          <td>${invStatusBadge(b.status)}</td>
+          <td><button class="btn btn-sm btn-ghost" onclick="openEditBill('${b.id}')">Edit</button></td>
+        </tr>`}).join('')}
+      </tbody>
+    </table>
+    <div class="empty" style="${bills.length?'display:none':''}">No bills yet.</div>
+    </div>
+  </div>`;
+}
+function openNewBill(){
+  document.getElementById('bill-id').value='';
+  document.getElementById('billTitle').textContent='New bill';
+  document.getElementById('billDeleteBtn').style.display='none';
+  ['bill-num','bill-vendor','bill-amount','bill-paid','bill-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  populateContactDropdowns();
+  document.getElementById('bill-date').value=today();
+  const d=new Date(); d.setDate(d.getDate()+30);
+  document.getElementById('bill-due').value=d.toISOString().split('T')[0];
+  document.getElementById('bill-status').value='Unpaid';
+  document.getElementById('bill-cat').value='Services';
+  document.getElementById('bill-num').value='BILL-'+(String(bills.length+1).padStart(3,'0'));
+  document.getElementById('billMo').classList.add('open');
+}
+function openEditBill(id){
+  const b=bills.find(x=>x.id===id); if(!b)return;
+  document.getElementById('bill-id').value=b.id;
+  document.getElementById('billTitle').textContent='Edit bill';
+  document.getElementById('billDeleteBtn').style.display='';
+  const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  set('bill-num',b.bill_num);set('bill-vendor',b.vendor);set('bill-date',b.bill_date);
+  set('bill-due',b.due_date);set('bill-amount',b.amount);set('bill-paid',b.amount_paid);set('bill-notes',b.notes);
+  document.getElementById('bill-status').value=b.status||'Unpaid';
+  document.getElementById('bill-cat').value=b.category||'Services';
+  document.getElementById('billMo').classList.add('open');
+}
+function closeBillModal(){document.getElementById('billMo').classList.remove('open');}
+async function saveBill(){
+  const num=document.getElementById('bill-num').value.trim();
+  const vendor=document.getElementById('bill-vendor').value.trim();
+  const amount=parseFloat(document.getElementById('bill-amount').value)||0;
+  if(!num||!vendor||!amount){toast('Bill #, vendor and amount required','err');return;}
+  const editId=document.getElementById('bill-id').value;
+  const payload={
+    bill_num:num,vendor,bill_date:document.getElementById('bill-date').value||null,
+    due_date:document.getElementById('bill-due').value||null,amount,
+    amount_paid:parseFloat(document.getElementById('bill-paid').value)||0,
+    status:document.getElementById('bill-status').value,
+    category:document.getElementById('bill-cat').value,
+    notes:document.getElementById('bill-notes').value||null,
+    updated_at:new Date().toISOString(),
+  };
+  const btn=document.getElementById('billSaveBtn'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    if(editId){
+      const{error}=await db.from('ledger_bills').update(payload).eq('id',editId);
+      if(error)throw error;toast('Bill updated','ok');
+    } else {
+      const{error}=await db.from('ledger_bills').insert({...payload,created_at:new Date().toISOString()});
+      if(error)throw error;toast('Bill created','ok');
+    }
+    // Auto journal entry: Dr Expense / Cr Accounts Payable
+    if(payload.status!=='Void'){
+      const expenseCode = {
+        Rent:'5100',Utilities:'5200',Salaries:'5001',Materials:'5300',
+        Services:'5600',Insurance:'5500',Equipment:'5300',Travel:'5400',Other:'5900'
+      }[payload.category]||'5900';
+      await postAutoJournal(
+        `Bill ${payload.bill_num} — ${payload.vendor}`,
+        payload.bill_num,
+        [
+          {code:expenseCode, debit:payload.amount, credit:0},  // Dr Expense
+          {code:'2001',      debit:0, credit:payload.amount},  // Cr AP
+        ]
+      );
+    }
+    closeBillModal(); await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save bill';}
+}
+async function deleteBill(){
+  const id=document.getElementById('bill-id').value; if(!id||!confirm('Delete this bill?'))return;
+  const{error}=await db.from('ledger_bills').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok'); closeBillModal(); await loadAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BANK TRANSACTIONS
+// ═══════════════════════════════════════════════════════════════
+function renderBank(container){
+  const credits=bankTxs.filter(t=>t.type==='credit').reduce((s,t)=>s+(t.amount||0),0);
+  const debits=bankTxs.filter(t=>t.type==='debit').reduce((s,t)=>s+(t.amount||0),0);
+  const balance=credits-debits;
+  const unreconciled=bankTxs.filter(t=>!t.reconciled).length;
+  container.innerHTML=`
+  <div class="inv-status-bar" style="padding:16px 24px 0">
+    <div class="inv-stat"><div class="inv-stat-label">Balance</div><div class="inv-stat-val" style="color:${balance>=0?'var(--green)':'var(--red)'}">${fmt(balance,0)} <span style="font-size:12px;color:var(--t3)">SAR</span></div></div>
+    <div class="inv-stat"><div class="inv-stat-label">Total credits</div><div class="inv-stat-val" style="color:var(--green)">${fmt(credits,0)}</div></div>
+    <div class="inv-stat"><div class="inv-stat-label">Total debits</div><div class="inv-stat-val" style="color:var(--red)">${fmt(debits,0)}</div></div>
+    <div class="inv-stat"><div class="inv-stat-label">Unreconciled</div><div class="inv-stat-val" style="color:${unreconciled>0?'var(--amber)':'var(--green)'}">${unreconciled}</div></div>
+  </div>
+  <div class="section">
+    <div class="section-hd"><div class="section-title">Transactions</div></div>
+    <div class="twrap"><table>
+      <thead><tr><th>Date</th><th>Description</th><th>Account</th><th>Reference</th><th style="text-align:right">Amount</th><th>Type</th><th>Reconciled</th><th>Actions</th></tr></thead>
+      <tbody>${bankTxs.map(t=>`<tr>
+        <td class="mono">${t.date||'—'}</td>
+        <td>${t.description||'—'}</td>
+        <td style="color:var(--t2);font-size:12px">${t.account||'—'}</td>
+        <td class="mono" style="color:var(--t3)">${t.reference||'—'}</td>
+        <td class="mono" style="text-align:right;color:${t.type==='credit'?'var(--green)':'var(--red)'}">${t.type==='debit'?'−':'+'} ${fmt(t.amount,2)}</td>
+        <td><span class="badge ${t.type==='credit'?'b-green':'b-red'}">${t.type==='credit'?'Credit':'Debit'}</span></td>
+        <td><span class="badge ${t.reconciled?'b-green':'b-amber'}">${t.reconciled?'✓ Reconciled':'Pending'}</span></td>
+        <td><button class="btn btn-sm btn-ghost" onclick="openEditBankTx('${t.id}')">Edit</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="empty" style="${bankTxs.length?'display:none':''}">No transactions yet.</div>
+    </div>
+  </div>`;
+}
+function openNewBankTx(){
+  document.getElementById('bank-id').value='';
+  document.getElementById('bankTitle').textContent='Add transaction';
+  document.getElementById('bankDeleteBtn').style.display='none';
+  ['bank-desc','bank-amount','bank-ref','bank-matched'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('bank-date').value=today();
+  document.getElementById('bank-type').value='credit';
+  document.getElementById('bank-account').value='ANB Current Account';
+  document.getElementById('bank-reconciled').value='false';
+  document.getElementById('bankMo').classList.add('open');
+}
+function openEditBankTx(id){
+  const t=bankTxs.find(x=>x.id===id); if(!t)return;
+  document.getElementById('bank-id').value=t.id;
+  document.getElementById('bankTitle').textContent='Edit transaction';
+  document.getElementById('bankDeleteBtn').style.display='';
+  const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  set('bank-date',t.date);set('bank-desc',t.description);set('bank-amount',t.amount);
+  set('bank-account',t.account);set('bank-ref',t.reference);set('bank-matched',t.matched_doc);
+  document.getElementById('bank-type').value=t.type||'credit';
+  document.getElementById('bank-reconciled').value=t.reconciled?'true':'false';
+  document.getElementById('bankMo').classList.add('open');
+}
+function closeBankModal(){document.getElementById('bankMo').classList.remove('open');}
+async function saveBankTx(){
+  const desc=document.getElementById('bank-desc').value.trim();
+  const amount=parseFloat(document.getElementById('bank-amount').value)||0;
+  if(!desc||!amount){toast('Description and amount required','err');return;}
+  const editId=document.getElementById('bank-id').value;
+  const payload={
+    date:document.getElementById('bank-date').value||null,description:desc,amount,
+    type:document.getElementById('bank-type').value,
+    account:document.getElementById('bank-account').value||null,
+    reference:document.getElementById('bank-ref').value||null,
+    reconciled:document.getElementById('bank-reconciled').value==='true',
+    matched_doc:document.getElementById('bank-matched').value||null,
+    updated_at:new Date().toISOString(),
+  };
+  const btn=document.getElementById('bankSaveBtn'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    if(editId){const{error}=await db.from('bank_transactions').update(payload).eq('id',editId);if(error)throw error;toast('Transaction updated','ok');}
+    else{const{error}=await db.from('bank_transactions').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Transaction added','ok');}
+    closeBankModal(); await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save transaction';}
+}
+async function deleteBankTx(){
+  const id=document.getElementById('bank-id').value; if(!id||!confirm('Delete this transaction?'))return;
+  const{error}=await db.from('bank_transactions').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok'); closeBankModal(); await loadAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHART OF ACCOUNTS
+// ═══════════════════════════════════════════════════════════════
+function renderCOA(container){
+  const types=['Asset','Liability','Equity','Revenue','Expense'];
+  const groups=types.map(t=>({type:t,accounts:accounts.filter(a=>a.type===t)}));
+  container.innerHTML=`
+  <div class="section">
+    <div class="section-hd"><div class="section-title">Chart of accounts (${accounts.length})</div></div>
+    <div class="twrap">
+      ${groups.map(g=>`
+        <div class="acct-type-hd">${g.type} <span style="font-weight:400;color:var(--t3)">(${g.accounts.length})</span></div>
+        ${g.accounts.map(a=>`
+          <div class="acct-row" onclick="openEditCOA('${a.id}')" style="cursor:pointer">
+            <span class="acct-code">${a.code||'—'}</span>
+            <span class="acct-name">${a.name}</span>
+            <span class="acct-type">${a.subtype||''}</span>
+            <span class="acct-bal">${a.description||''}</span>
+          </div>`).join('')}
+        ${!g.accounts.length?'<div style="padding:12px 14px;font-size:12px;color:var(--t3)">No accounts of this type</div>':''}
+      `).join('')}
+    </div>
+  </div>`;
+}
+function openNewCOA(){
+  document.getElementById('coa-id').value='';
+  document.getElementById('coaTitle').textContent='New account';
+  document.getElementById('coaDeleteBtn').style.display='none';
+  ['coa-code','coa-name','coa-subtype','coa-desc'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('coa-type').value='Asset';
+  document.getElementById('coaMo').classList.add('open');
+}
+function openEditCOA(id){
+  const a=accounts.find(x=>x.id===id); if(!a)return;
+  document.getElementById('coa-id').value=a.id;
+  document.getElementById('coaTitle').textContent='Edit account';
+  document.getElementById('coaDeleteBtn').style.display='';
+  const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  set('coa-code',a.code);set('coa-name',a.name);set('coa-subtype',a.subtype);set('coa-desc',a.description);
+  document.getElementById('coa-type').value=a.type||'Asset';
+  document.getElementById('coaMo').classList.add('open');
+}
+function closeCOA(){document.getElementById('coaMo').classList.remove('open');}
+async function saveCOA(){
+  const code=document.getElementById('coa-code').value.trim();
+  const name=document.getElementById('coa-name').value.trim();
+  if(!code||!name){toast('Code and name required','err');return;}
+  const editId=document.getElementById('coa-id').value;
+  const payload={code,name,type:document.getElementById('coa-type').value,
+    subtype:document.getElementById('coa-subtype').value||null,
+    description:document.getElementById('coa-desc').value||null,updated_at:new Date().toISOString()};
+  try{
+    if(editId){const{error}=await db.from('accounts').update(payload).eq('id',editId);if(error)throw error;toast('Account updated','ok');}
+    else{const{error}=await db.from('accounts').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Account created','ok');}
+    closeCOA(); await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+}
+async function deleteCOA(){
+  const id=document.getElementById('coa-id').value; if(!id||!confirm('Delete this account?'))return;
+  const{error}=await db.from('accounts').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok'); closeCOA(); await loadAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REPORTS — P&L, BALANCE SHEET, AR AGING
+// ═══════════════════════════════════════════════════════════════
+function renderPL(container){
+  const revenue=invoices.filter(i=>i.status==='Paid').reduce((s,i)=>s+(i.amount||0),0);
+  const expenses=bills.filter(b=>b.status==='Paid').reduce((s,b)=>s+(b.amount||0),0);
+  const netIncome=revenue-expenses;
+  const cats={};
+  bills.filter(b=>b.status==='Paid').forEach(b=>{cats[b.category||'Other']=(cats[b.category||'Other']||0)+(b.amount||0);});
+  container.innerHTML=`
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">Profit &amp; Loss statement</div>
+      <button class="btn btn-sm" onclick="printReport()">Print / PDF</button>
+    </div>
+    <div class="report-block" id="plReport">
+      <div class="report-block-hd">Income</div>
+      <div class="report-block-body">
+        <div class="totals-row"><span>Revenue from invoices</span><span class="mono">${fmtSAR(revenue)}</span></div>
+        <div class="totals-row subtotal"><span>Total income</span><span class="mono">${fmtSAR(revenue)}</span></div>
+      </div>
+      <div class="report-block-hd" style="margin-top:0">Expenses</div>
+      <div class="report-block-body">
+        ${Object.entries(cats).map(([k,v])=>`<div class="totals-row"><span>${k}</span><span class="mono">${fmtSAR(v)}</span></div>`).join('')}
+        <div class="totals-row subtotal"><span>Total expenses</span><span class="mono">${fmtSAR(expenses)}</span></div>
+      </div>
+      <div class="report-block-body" style="border-top:2px solid var(--border2)">
+        <div class="totals-row" style="font-size:15px;font-weight:600"><span>Net income</span><span class="mono" style="color:${netIncome>=0?'var(--green)':'var(--red)'}">${fmtSAR(netIncome)}</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderBS(container){
+  const totalAssets=bankTxs.reduce((s,t)=>s+(t.type==='credit'?1:-1)*(t.amount||0),0);
+  const totalAR=invoices.filter(i=>i.status!=='Paid'&&i.status!=='Void').reduce((s,i)=>s+(i.amount||0),0);
+  const totalAP=bills.filter(b=>b.status==='Unpaid'||b.status==='Partial').reduce((s,b)=>s+(b.amount||0),0);
+  const equity=totalAssets+totalAR-totalAP;
+  container.innerHTML=`
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">Balance sheet</div>
+      <button class="btn btn-sm" onclick="printReport()">Print / PDF</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="report-block">
+        <div class="report-block-hd">Assets</div>
+        <div class="report-block-body">
+          <div class="totals-row"><span>Cash &amp; bank</span><span class="mono">${fmtSAR(Math.max(0,totalAssets))}</span></div>
+          <div class="totals-row"><span>Accounts receivable</span><span class="mono">${fmtSAR(totalAR)}</span></div>
+          <div class="totals-row subtotal"><span>Total assets</span><span class="mono">${fmtSAR(Math.max(0,totalAssets)+totalAR)}</span></div>
+        </div>
+      </div>
+      <div class="report-block">
+        <div class="report-block-hd">Liabilities &amp; Equity</div>
+        <div class="report-block-body">
+          <div class="totals-row"><span>Accounts payable</span><span class="mono">${fmtSAR(totalAP)}</span></div>
+          <div class="totals-row"><span>Equity</span><span class="mono" style="color:${equity>=0?'var(--green)':'var(--red)'}">${fmtSAR(equity)}</span></div>
+          <div class="totals-row subtotal"><span>Total liab. &amp; equity</span><span class="mono">${fmtSAR(totalAP+equity)}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAging(container){
+  const buckets=[{label:'Current (0–30d)',max:30},{label:'31–60 days',min:30,max:60},{label:'61–90 days',min:60,max:90},{label:'91–120 days',min:90,max:120},{label:'120+ days',min:120}];
+  const rows=invoices.filter(i=>i.status!=='Paid'&&i.status!=='Void').map(inv=>{
+    const days=daysAgo(inv.due_date);
+    const bal=(inv.amount||0)-(inv.amount_paid||0);
+    return{...inv,daysOverdue:days,balance:bal};
+  });
+  container.innerHTML=`
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">Accounts receivable aging</div>
+      <button class="btn btn-sm" onclick="printReport()">Print / PDF</button>
+    </div>
+    <div class="report-block">
+      <div class="report-block-hd">Summary by aging bucket</div>
+      <div class="report-block-body">
+        ${buckets.map(b=>{
+          const brows=rows.filter(r=>b.min!==undefined?r.daysOverdue>b.min&&(!b.max||r.daysOverdue<=b.max):r.daysOverdue<=b.max);
+          const total=brows.reduce((s,r)=>s+r.balance,0);
+          return`<div class="totals-row"><span>${b.label} <span style="font-size:11px;color:var(--t3)">(${brows.length} invoices)</span></span><span class="mono" style="color:${total>0?'var(--amber)':''}">${fmtSAR(total)}</span></div>`;
+        }).join('')}
+        <div class="totals-row subtotal"><span>Total AR outstanding</span><span class="mono" style="color:var(--amber)">${fmtSAR(rows.reduce((s,r)=>s+r.balance,0))}</span></div>
+      </div>
+    </div>
+    <div class="twrap" style="margin-top:16px"><table>
+      <thead><tr><th>Client</th><th>Invoice #</th><th>Due date</th><th>Days overdue</th><th style="text-align:right">Balance (SAR)</th><th>Status</th></tr></thead>
+      <tbody>${rows.sort((a,b)=>b.daysOverdue-a.daysOverdue).map(r=>`<tr>
+        <td style="font-weight:500">${r.client||'—'}</td>
+        <td class="mono">${r.invoice_num||'—'}</td>
+        <td class="mono">${r.due_date||'—'}</td>
+        <td class="mono" style="color:${r.daysOverdue>60?'var(--red)':r.daysOverdue>30?'var(--amber)':'var(--t2)'}">${r.daysOverdue}d</td>
+        <td class="mono" style="text-align:right">${fmt(r.balance,2)}</td>
+        <td>${invStatusBadge(r.status)}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+function printReport() {
+  window.print();
+}
+function exportReport() { printReport(); }
+
+// ═══════════════════════════════════════════════════════════════
+// DARK MODE
+// ═══════════════════════════════════════════════════════════════
+function toggleDark(){
+  const d=document.body.classList.toggle('dark');
+  localStorage.setItem('flowtrack-dark',d?'1':'0');
+  updateDarkUI(d);
+}
+function updateDarkUI(d){
+  const t=document.getElementById('darkTrack'),l=document.getElementById('darkLabel');
+  if(t) t.classList.toggle('on',d);
+  if(l) l.textContent=d?'Light mode':'Dark mode';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL OVERLAYS
+// ═══════════════════════════════════════════════════════════════
+// ── AUTO JOURNAL ENTRIES ──────────────────────────────────────
+async function postAutoJournal(description, reference, lines) {
+  // Find account IDs by code
+  const getAcct = (code) => accounts.find(a=>a.code===code)?.id;
+  const resolvedLines = lines.map(l=>({...l, account_id: l.account_id || getAcct(l.code)})).filter(l=>l.account_id);
+  if (resolvedLines.length < 2) return; // skip if accounts not set up
+  const totalDr = resolvedLines.reduce((s,l)=>s+(parseFloat(l.debit)||0),0);
+  const totalCr = resolvedLines.reduce((s,l)=>s+(parseFloat(l.credit)||0),0);
+  if (Math.abs(totalDr-totalCr)>0.01) return;
+  const { error } = await db.from('journal_entries').insert({
+    date: new Date().toISOString().split('T')[0],
+    reference, description,
+    lines: JSON.stringify(resolvedLines),
+    auto_generated: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+  if (error) console.warn('Auto-journal failed:', error.message);
+}
+
+// ── CROSS-MODULE SYNC ──────────────────────────────────────────
+async function syncInvoiceToFlowTrack(inv) {
+  // If invoice has a linked PO, update FlowTrack job status
+  if (!inv.linked_po) return;
+  const statusMap = { Draft:'Pending Invoice', Sent:'Pending Invoice', Paid:'Paid in Full', Overdue:'Overdue', Void:'PO Received' };
+  const newStatus = statusMap[inv.status];
+  if (!newStatus) return;
+  await db.from('jobs').update({
+    invoice_no: inv.invoice_num,
+    invoice_date: inv.issue_date,
+    due_date: inv.due_date,
+    paid_amount: inv.amount_paid||0,
+    paid_date: inv.status==='Paid' ? new Date().toISOString().split('T')[0] : null,
+    status: newStatus,
+    updated_at: new Date().toISOString(),
+  }).eq('po', inv.linked_po);
+}
+
+// ── CONTACTS CRUD ──────────────────────────────────────────────
+function renderContacts(container) {
+  const clients = contacts.filter(c=>c.type==='client'||c.type==='both');
+  const vendors = contacts.filter(c=>c.type==='vendor'||c.type==='both');
+  container.innerHTML=`
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">Clients & vendors (${contacts.length})</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="openNewContact('client')">+ Add client</button>
+        <button class="btn btn-sm" onclick="openNewContact('vendor')">+ Add vendor</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:10px">Clients (${clients.length})</div>
+        <div class="twrap">
+          <table><thead><tr><th>Name</th><th>Email</th><th>VAT #</th><th>Actions</th></tr></thead>
+          <tbody>${clients.map(c=>`<tr>
+            <td style="font-weight:500">${c.name}</td>
+            <td style="font-size:12px;color:var(--t2)">${c.email||'—'}</td>
+            <td class="mono">${c.vat_number||'—'}</td>
+            <td><button class="btn btn-sm btn-ghost" onclick="openEditContact('${c.id}')">Edit</button></td>
+          </tr>`).join('')}</tbody></table>
+          ${!clients.length?'<div class="empty">No clients yet</div>':''}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:10px">Vendors (${vendors.length})</div>
+        <div class="twrap">
+          <table><thead><tr><th>Name</th><th>Email</th><th>VAT #</th><th>Actions</th></tr></thead>
+          <tbody>${vendors.map(c=>`<tr>
+            <td style="font-weight:500">${c.name}</td>
+            <td style="font-size:12px;color:var(--t2)">${c.email||'—'}</td>
+            <td class="mono">${c.vat_number||'—'}</td>
+            <td><button class="btn btn-sm btn-ghost" onclick="openEditContact('${c.id}')">Edit</button></td>
+          </tr>`).join('')}</tbody></table>
+          ${!vendors.length?'<div class="empty">No vendors yet</div>':''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function populateContactDropdowns() {
+  const clients = contacts.filter(c=>c.type==='client'||c.type==='both');
+  const vendors = contacts.filter(c=>c.type==='vendor'||c.type==='both');
+  const invSel = document.getElementById('inv-client-id');
+  const billSel = document.getElementById('bill-vendor-id');
+  if (invSel) invSel.innerHTML='<option value="">Select client…</option>'+clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if (billSel) billSel.innerHTML='<option value="">Select vendor…</option>'+vendors.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function setContactFromSelect(selectId, inputId) {
+  const sel = document.getElementById(selectId);
+  const inp = document.getElementById(inputId);
+  if (!sel||!inp) return;
+  const ct = contacts.find(c=>c.id===sel.value);
+  if (ct) inp.value = ct.name;
+}
+
+let contactReturnType = null;
+function openNewContact(type) {
+  contactReturnType = type;
+  document.getElementById('ct-id').value='';
+  document.getElementById('contactTitle').textContent='Add '+(type||'contact');
+  document.getElementById('ctDeleteBtn').style.display='none';
+  ['ct-name','ct-email','ct-phone','ct-vat','ct-cr','ct-address','ct-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('ct-type').value=type||'client';
+  document.getElementById('contactMo').classList.add('open');
+}
+function openEditContact(id) {
+  const c=contacts.find(x=>x.id===id);if(!c)return;
+  document.getElementById('ct-id').value=c.id;
+  document.getElementById('contactTitle').textContent='Edit contact';
+  document.getElementById('ctDeleteBtn').style.display='';
+  const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  set('ct-name',c.name);set('ct-email',c.email);set('ct-phone',c.phone);
+  set('ct-vat',c.vat_number);set('ct-cr',c.cr_number);set('ct-address',c.address);set('ct-notes',c.notes);
+  document.getElementById('ct-type').value=c.type||'client';
+  document.getElementById('contactMo').classList.add('open');
+}
+function closeContact(){document.getElementById('contactMo').classList.remove('open');}
+async function saveContact(){
+  const name=document.getElementById('ct-name').value.trim();
+  if(!name){toast('Name is required','err');return;}
+  const editId=document.getElementById('ct-id').value;
+  const payload={
+    name,type:document.getElementById('ct-type').value,
+    email:document.getElementById('ct-email').value||null,
+    phone:document.getElementById('ct-phone').value||null,
+    vat_number:document.getElementById('ct-vat').value||null,
+    cr_number:document.getElementById('ct-cr').value||null,
+    address:document.getElementById('ct-address').value||null,
+    notes:document.getElementById('ct-notes').value||null,
+    updated_at:new Date().toISOString(),
+  };
+  const btn=document.getElementById('ctSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    if(editId){const{error}=await db.from('contacts').update(payload).eq('id',editId);if(error)throw error;toast('Contact updated','ok');}
+    else{const{error}=await db.from('contacts').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Contact added','ok');}
+    closeContact(); await loadAll();
+    populateContactDropdowns();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save contact';}
+}
+async function deleteContact(){
+  const id=document.getElementById('ct-id').value;if(!id||!confirm('Delete this contact?'))return;
+  const{error}=await db.from('contacts').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok');closeContact();await loadAll();
+}
+
+// ── TRIAL BALANCE ──────────────────────────────────────────────
+function renderTrialBalance(container) {
+  const rows = accounts.map(a=>{
+    const bal = getAccountBalance(a.id);
+    const debit  = bal > 0 ? bal : 0;
+    const credit = bal < 0 ? Math.abs(bal) : 0;
+    return {...a, bal, debit, credit};
+  }).filter(a=>a.bal!==0 || a.code); // show all accounts with transactions
+  const totalDr = rows.reduce((s,r)=>s+r.debit,0);
+  const totalCr = rows.reduce((s,r)=>s+r.credit,0);
+  const balanced = Math.abs(totalDr-totalCr)<0.01;
+  container.innerHTML=`
+  <div class="section">
+    <div class="section-hd">
+      <div class="section-title">Trial balance</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;padding:4px 12px;border-radius:20px;background:${balanced?'var(--gbg)':'var(--rbg)'};color:${balanced?'var(--green)':'var(--red)'}">${balanced?'✓ Balanced':'✗ Out of balance'}</span>
+        <button class="btn btn-sm" onclick="window.print()">Print / PDF</button>
+      </div>
+    </div>
+    <div class="twrap"><table>
+      <thead><tr>
+        <th>Code</th><th>Account name</th><th>Type</th>
+        <th style="text-align:right">Debit (SAR)</th>
+        <th style="text-align:right">Credit (SAR)</th>
+      </tr></thead>
+      <tbody>
+        ${['Asset','Liability','Equity','Revenue','Expense'].map(type=>{
+          const typeRows=rows.filter(r=>r.type===type&&!r.parent_id);
+          if(!typeRows.length)return'';
+          return`<tr style="background:var(--s2)"><td colspan="5" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);padding:8px 14px">${type}</td></tr>`+
+          typeRows.map(r=>{
+            const children=rows.filter(c=>c.parent_id===r.id);
+            return`<tr>
+              <td class="mono">${r.code||'—'}</td>
+              <td style="font-weight:500">${r.name}</td>
+              <td style="color:var(--t3);font-size:12px">${r.subtype||r.type}</td>
+              <td class="mono" style="text-align:right;color:var(--blue)">${r.debit?fmt(r.debit,2):'—'}</td>
+              <td class="mono" style="text-align:right;color:var(--green)">${r.credit?fmt(r.credit,2):'—'}</td>
+            </tr>`+
+            children.map(c=>`<tr style="background:var(--s2)">
+              <td class="mono" style="padding-left:28px;color:var(--t3)">${c.code||'—'}</td>
+              <td style="padding-left:28px;color:var(--t2)">↳ ${c.name}</td>
+              <td style="color:var(--t3);font-size:11px">${c.subtype||''}</td>
+              <td class="mono" style="text-align:right;color:var(--blue)">${c.debit?fmt(c.debit,2):'—'}</td>
+              <td class="mono" style="text-align:right;color:var(--green)">${c.credit?fmt(c.credit,2):'—'}</td>
+            </tr>`).join('');
+          }).join('');
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--s2);font-weight:600;border-top:2px solid var(--border2)">
+          <td colspan="3" style="padding:12px 14px">Totals</td>
+          <td class="mono" style="text-align:right;color:var(--blue);padding:12px 14px">${fmt(totalDr,2)}</td>
+          <td class="mono" style="text-align:right;color:var(--green);padding:12px 14px">${fmt(totalCr,2)}</td>
+        </tr>
+      </tfoot>
+    </table></div>
+  </div>`;
+}
+
+['jeMo','invMo','billMo','bankMo','coaMo','contactMo'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowSuite — ANLSCO</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#F4F2ED;--surface:#FFF;--s2:#F8F7F3;--border:#E2DDD5;--border2:#CCC8BE;
+  --text:#1A1916;--t2:#6B6760;--t3:#9C9890;--ink:#1A1916;--ink-fg:#F4F2ED;
+  --green:#1C6B4A;--gbg:#E8F5EE;--amber:#8A5A0A;--abg:#FDF3DC;
+  --red:#8B2020;--rbg:#FDEAEA;--blue:#1A3B6E;--bbg:#E8EFF9;
+  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+body.dark{
+  --bg:#111110;--surface:#1C1B19;--s2:#242320;--border:#2E2D2A;--border2:#3D3C38;
+  --text:#F0EEE9;--t2:#A09D97;--t3:#6B6860;--ink:#F0EEE9;--ink-fg:#111110;
+  --green:#2D9E6B;--gbg:#0D2B1E;--amber:#C98A2A;--abg:#2A1E08;
+  --red:#D94F4F;--rbg:#2A0F0F;--blue:#4A7FD4;--bbg:#0D1E38;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;transition:background .2s,color .2s}
+
+/* ── LOGIN ── */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ink);padding:20px}
+.login-wrap{width:100%;max-width:420px}
+.login-wordmark{font-size:28px;font-weight:600;letter-spacing:-.8px;color:var(--ink-fg);margin-bottom:4px}
+.login-tagline{font-size:13px;color:rgba(255,255,255,.4);font-family:var(--mono);margin-bottom:36px}
+.login-card{background:var(--surface);border-radius:18px;padding:32px;box-shadow:0 40px 80px rgba(0,0,0,.35)}
+.lrow{margin-bottom:14px}
+.lrow label{display:block;font-size:12px;font-weight:500;color:var(--t2);margin-bottom:5px}
+.lrow input{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s}
+.lrow input:focus{border-color:var(--border2)}
+.login-btn{width:100%;padding:12px;background:var(--ink);color:var(--ink-fg);border:none;border-radius:9px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;margin-top:6px;transition:opacity .15s}
+.login-btn:hover{opacity:.85}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{font-size:12px;color:var(--red);background:var(--rbg);border:1px solid #f0b0b0;border-radius:8px;padding:8px 12px;margin-top:12px;display:none}
+
+/* ── HOME ── */
+#homeScreen{display:none;min-height:100vh}
+.home-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;height:60px;gap:16px}
+.nav-wordmark{font-size:16px;font-weight:600;letter-spacing:-.3px;flex:1}
+.nav-user{font-size:13px;color:var(--t2);display:flex;align-items:center;gap:12px}
+.nav-role{font-size:11px;font-family:var(--mono);padding:3px 9px;border-radius:20px}
+.role-admin{background:var(--ink);color:var(--ink-fg)}
+.role-finance{background:var(--bbg);color:var(--blue)}
+.role-operations{background:var(--gbg);color:var(--green)}
+.btn-sm{font-family:var(--sans);font-size:12px;padding:5px 12px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;color:var(--text);transition:all .15s}
+.btn-sm:hover{background:var(--s2)}
+.btn-dark{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.btn-dark:hover{opacity:.85}
+
+.home-body{padding:48px 32px;max-width:1000px;margin:0 auto}
+.home-greeting{font-size:24px;font-weight:300;letter-spacing:-.5px;margin-bottom:6px}
+.home-sub{font-size:14px;color:var(--t2);margin-bottom:40px}
+
+/* ── MODULE CARDS ── */
+.modules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-bottom:48px}
+.module-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;text-decoration:none;color:inherit;display:block}
+.module-card:hover{border-color:var(--border2);box-shadow:0 8px 32px rgba(0,0,0,.08);transform:translateY(-2px)}
+.module-card.locked{cursor:not-allowed;opacity:.5}
+.module-card.locked:hover{transform:none;box-shadow:none}
+.mc-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.mc-icon svg{width:24px;height:24px}
+.mc-name{font-size:17px;font-weight:500;letter-spacing:-.2px;margin-bottom:6px}
+.mc-desc{font-size:13px;color:var(--t2);line-height:1.5}
+.mc-tag{position:absolute;top:20px;right:20px;font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:20px;font-weight:500}
+.mc-tag.new{background:var(--gbg);color:var(--green)}
+.mc-tag.locked{background:var(--s2);color:var(--t3);border:1px solid var(--border)}
+.mc-footer{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--t3)}
+.mc-arrow{width:28px;height:28px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.module-card:hover .mc-arrow{transform:translateX(3px)}
+
+/* ── QUICK STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:40px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.stat-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.stat-val{font-size:22px;font-weight:300;font-family:var(--mono);letter-spacing:-.5px}
+.stat-val.up{color:var(--green)}.stat-val.warn{color:var(--amber)}.stat-val.down{color:var(--red)}
+.stat-sub{font-size:11px;color:var(--t3);margin-top:3px}
+
+/* ── DARK TOGGLE ── */
+.dark-toggle{background:none;border:none;cursor:pointer;color:var(--t2);font-family:var(--sans);font-size:12px;display:flex;align-items:center;gap:6px;padding:0}
+.dark-toggle:hover{color:var(--text)}
+.tog-track{width:26px;height:15px;border-radius:20px;background:var(--border2);position:relative;transition:background .2s;flex-shrink:0}
+.tog-track.on{background:var(--text)}
+.tog-thumb{width:11px;height:11px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tog-track.on .tog-thumb{transform:translateX(11px)}
+
+/* ── SPINNER ── */
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── RECENT ACTIVITY ── */
+.activity-section{margin-top:0}
+.activity-title{font-size:13px;font-weight:500;color:var(--t2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)}
+.activity-list{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.activity-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;transition:background .12s}
+.activity-item:last-child{border-bottom:none}
+.activity-item:hover{background:var(--s2)}
+.act-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.act-text{flex:1}
+.act-time{font-size:11px;color:var(--t3);font-family:var(--mono);white-space:nowrap}
+.act-module{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:20px;background:var(--s2);color:var(--t3)}
+
+@media(max-width:600px){
+  .home-body{padding:24px 16px}
+  .modules-grid{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .home-nav{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-wrap">
+    <div class="login-wordmark">FlowSuite</div>
+    <div class="login-tagline">ANLSCO business platform</div>
+    <div class="login-card">
+      <div class="lrow"><label>Email address</label><input id="loginEmail" type="email" placeholder="you@anls.com" autocomplete="email"></div>
+      <div class="lrow"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="homeScreen">
+  <nav class="home-nav">
+    <div class="nav-wordmark">FlowSuite</div>
+    <div class="nav-user">
+      <span id="nav-name">—</span>
+      <span class="nav-role" id="nav-role">—</span>
+      <button class="dark-toggle" onclick="toggleDark()">
+        <span class="tog-track" id="darkTrack"><span class="tog-thumb"></span></span>
+      </button>
+      <button class="btn-sm" onclick="doLogout()">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="home-body">
+    <div class="home-greeting" id="homeGreeting">Good morning</div>
+    <div class="home-sub" id="homeSub">Select a module to get started</div>
+
+    <!-- Quick stats (finance/admin only) -->
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="stat-card"><div class="stat-label">Open POs</div><div class="stat-val" id="qs-pos">—</div><div class="stat-sub">Active jobs</div></div>
+      <div class="stat-card"><div class="stat-label">Pending invoice</div><div class="stat-val warn" id="qs-pending">—</div><div class="stat-sub">Ready to invoice</div></div>
+      <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-val down" id="qs-overdue">—</div><div class="stat-sub">Needs attention</div></div>
+      <div class="stat-card"><div class="stat-label">Missing quote</div><div class="stat-val warn" id="qs-noquote">—</div><div class="stat-sub">No quotation linked</div></div>
+    </div>
+
+    <!-- Module cards -->
+    <div class="modules-grid" id="modulesGrid"></div>
+
+    <!-- Recent activity -->
+    <div class="activity-section" id="activitySection" style="display:none">
+      <div class="activity-title">Recent activity</div>
+      <div class="activity-list" id="activityList">
+        <div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://pqcjhdrvqzcsvddimwaq.supabase.co';
+const SUPA_KEY = 'sb_publishable_Que35EYrhPKCFzQuz9Okog_QkU0fbmh';
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'flowsuite-auth',   // same key on ALL pages = shared session
+    storage: window.localStorage,
+  }
+});
+
+let currentUser = null;
+let currentRole = null;
+let currentProfile = null;
+
+// ── AUTH ──────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginErr');
+  if (!email||!pass) { showErr('Please enter your email and password.'); return; }
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Signing in…';
+  err.style.display='none';
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email, password:pass });
+    if (error) throw error;
+    const { data:profile } = await db.from('profiles').select('*').eq('id',data.user.id).single();
+    currentUser    = data.user;
+    currentProfile = profile;
+    currentRole    = profile?.role || 'operations';
+    showHome();
+  } catch(e) {
+    showErr(e.message||'Login failed.');
+    btn.disabled=false; btn.textContent='Sign in';
+  }
+}
+function showErr(msg) {
+  const el=document.getElementById('loginErr'); el.textContent=msg; el.style.display='block';
+  document.getElementById('loginBtn').disabled=false;
+  document.getElementById('loginBtn').textContent='Sign in';
+}
+async function doLogout() {
+  await db.auth.signOut();
+  currentUser=null; currentRole=null; currentProfile=null;
+  document.getElementById('homeScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('loginPass').value='';
+}
+(async()=>{
+  const { data:{ session } } = await db.auth.getSession();
+  if (session?.user) {
+    const { data:profile } = await db.from('profiles').select('*').eq('id',session.user.id).single();
+    currentUser    = session.user;
+    currentProfile = profile;
+    currentRole    = profile?.role||'operations';
+    showHome();
+  }
+  document.getElementById('loginPass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+  document.getElementById('loginEmail').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('loginPass').focus(); });
+  if(localStorage.getItem('flowtrack-dark')==='1'){ document.body.classList.add('dark'); updateDarkUI(true); }
+})();
+
+// ── HOME ──────────────────────────────────────────────────────
+function showHome() {
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('homeScreen').style.display='block';
+
+  // Greeting
+  const h = new Date().getHours();
+  const greet = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  const name = currentProfile?.full_name?.split(' ')[0] || '';
+  document.getElementById('homeGreeting').textContent = greet + (name?', '+name:'');
+  document.getElementById('homeSub').textContent = roleSubtitle(currentRole);
+
+  // Nav
+  document.getElementById('nav-name').textContent = currentProfile?.full_name || currentUser.email;
+  const roleEl = document.getElementById('nav-role');
+  roleEl.textContent = currentRole.charAt(0).toUpperCase()+currentRole.slice(1);
+  roleEl.className = 'nav-role role-'+currentRole;
+
+  // Stats & activity for finance/admin
+  if (currentRole !== 'operations') {
+    document.getElementById('statsRow').style.display='grid';
+    document.getElementById('activitySection').style.display='block';
+    loadQuickStats();
+    loadRecentActivity();
+  }
+
+  renderModules();
+}
+
+function roleSubtitle(role) {
+  if (role==='admin')    return 'Administrator — full access to all modules';
+  if (role==='finance')  return 'Finance — access to FlowTrack and FlowLedger';
+  return 'Operations — access to FlowTrack';
+}
+
+// ── MODULES ───────────────────────────────────────────────────
+function renderModules() {
+  const isOps     = currentRole==='operations';
+  const isFinance = currentRole==='finance' || currentRole==='admin';
+
+  const modules = [
+    {
+      id: 'flowtrack',
+      name: 'FlowTrack',
+      desc: 'Manage purchase orders, quotations, and the full invoicing pipeline from PO receipt to payment.',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="18" rx="1.5"/><rect x="9" y="6" width="6" height="15" rx="1.5"/><rect x="15" y="9" width="6" height="12" rx="1.5"/></svg>`,
+      iconBg: '#E8EFF9', iconColor: '#1A3B6E',
+      href: 'flowtrack.html',
+      tag: null, tagClass: null,
+      accessible: true,
+      stats: ['PO tracking','Quotation workflow','Invoice status'],
+    },
+    {
+      id: 'flowledger',
+      name: 'FlowLedger',
+      desc: 'Full accounting module — journal entries, AR/AP management, bank reconciliation, and financial reports.',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="18" height="20" rx="2"/><path d="M7 7h10M7 12h10M7 17h6"/></svg>`,
+      iconBg: '#E8F5EE', iconColor: '#1C6B4A',
+      href: 'flowledger.html',
+      tag: isFinance ? null : 'Finance only',
+      tagClass: isFinance ? null : 'locked',
+      accessible: isFinance,
+      stats: ['Double-entry ledger','P&L · Balance sheet','AR aging'],
+    },
+    {
+      id: 'flowpeople',
+      name: 'FlowPeople',
+      desc: 'HR module — employee records, leave management, payroll, org chart, and performance reviews.',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>`,
+      iconBg: '#F0EAFA', iconColor: '#4A2080',
+      href: 'flowpeople.html',
+      tag: null, tagClass: null,
+      accessible: isFinance,
+      stats: ['Employees','Leave & payroll','Performance'],
+    },
+    {
+      id: 'reports',
+      name: 'Reports hub',
+      desc: 'Cross-module reporting — export consolidated financial and operational reports across all modules.',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l5-5 4 4 5-6 4 3"/><path d="M3 21h18"/></svg>`,
+      iconBg: '#FDF3DC', iconColor: '#8A5A0A',
+      href: null,
+      tag: 'Coming soon', tagClass: 'new',
+      accessible: false,
+      stats: ['CSV · Excel · PDF','Email scheduling','Custom date ranges'],
+    },
+  ];
+
+  document.getElementById('modulesGrid').innerHTML = modules.map(m => {
+    const locked = !m.accessible || !m.href;
+    return `<${m.href&&m.accessible?'a':'div'} 
+      class="module-card${locked?' locked':''}" 
+      ${m.href&&m.accessible?`href="${m.href}"`:''}
+      ${locked&&m.accessible===false&&m.href?`onclick="toast('${m.name} requires Finance or Admin access.')"`:''}>
+      <div class="mc-icon" style="background:${m.iconBg};color:${m.iconColor}">${m.icon}</div>
+      ${m.tag?`<span class="mc-tag ${m.tagClass||''}">${m.tag}</span>`:''}
+      <div class="mc-name">${m.name}</div>
+      <div class="mc-desc">${m.desc}</div>
+      <div class="mc-footer">
+        <span>${m.stats.join(' · ')}</span>
+        ${m.accessible&&m.href?`<div class="mc-arrow"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`:''}
+      </div>
+    </${m.href&&m.accessible?'a':'div'}>`;
+  }).join('');
+}
+
+// ── MODULE LAUNCH ─────────────────────────────────────────────
+async function launchModule(href) {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) { window.location.href = href; return; }
+  const isFile = window.location.protocol === 'file:';
+  if (isFile) {
+    // file:// — embed tokens in hash as fallback
+    const p = new URLSearchParams({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      token_type: 'bearer',
+    });
+    window.location.href = href + '#' + p.toString();
+  } else {
+    // Same Netlify domain — storageKey is shared, just navigate
+    window.location.href = href;
+  }
+}
+
+// ── QUICK STATS ───────────────────────────────────────────────
+async function loadQuickStats() {
+  try {
+    const { data } = await db.from('jobs').select('status,quote_no').eq('is_new',false).neq('status','Paid in Full');
+    if (!data) return;
+    document.getElementById('qs-pos').textContent     = data.length;
+    document.getElementById('qs-pending').textContent = data.filter(j=>j.status==='Pending Invoice').length;
+    document.getElementById('qs-overdue').textContent = data.filter(j=>j.status==='Overdue').length;
+    document.getElementById('qs-noquote').textContent  = data.filter(j=>!j.quote_no).length;
+  } catch(e) { /* silent */ }
+}
+
+// ── RECENT ACTIVITY ───────────────────────────────────────────
+async function loadRecentActivity() {
+  try {
+    const [jobsRes, invRes] = await Promise.all([
+      db.from('jobs').select('po,client,status,updated_at').order('updated_at',{ascending:false}).limit(5),
+      db.from('ledger_invoices').select('invoice_num,client,status,updated_at').order('updated_at',{ascending:false}).limit(5),
+    ]);
+    const jobs = (jobsRes.data||[]).map(j=>({
+      text:`${j.po} — ${j.client}`, sub:j.status,
+      time:j.updated_at, module:'FlowTrack',
+      color: j.status==='Overdue'?'var(--red)':j.status==='Pending Invoice'?'var(--amber)':'var(--green)',
+    }));
+    const invs = (invRes.data||[]).map(i=>({
+      text:`${i.invoice_num} — ${i.client}`, sub:i.status,
+      time:i.updated_at, module:'FlowLedger',
+      color: i.status==='Overdue'?'var(--red)':i.status==='Paid'?'var(--green)':'var(--amber)',
+    }));
+    const all = [...jobs,...invs].sort((a,b)=>new Date(b.time)-new Date(a.time)).slice(0,8);
+    document.getElementById('activityList').innerHTML = all.length
+      ? all.map(a=>`
+          <div class="activity-item">
+            <span class="act-dot" style="background:${a.color}"></span>
+            <span class="act-text"><strong>${a.text}</strong><br><span style="color:var(--t3);font-size:11px">${a.sub}</span></span>
+            <span class="act-module">${a.module}</span>
+            <span class="act-time">${timeAgo(a.time)}</span>
+          </div>`)
+        .join('')
+      : '<div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">No recent activity</div>';
+  } catch(e) {
+    document.getElementById('activityList').innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">Could not load activity</div>';
+  }
+}
+
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const s = Math.floor((new Date()-new Date(ts))/1000);
+  if (s<60) return 'just now';
+  if (s<3600) return Math.floor(s/60)+'m ago';
+  if (s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+// ── DARK MODE ─────────────────────────────────────────────────
+function toggleDark() {
+  const d = document.body.classList.toggle('dark');
+  localStorage.setItem('flowtrack-dark', d?'1':'0');
+  updateDarkUI(d);
+}
+function updateDarkUI(d) {
+  const t=document.getElementById('darkTrack'); if(t) t.classList.toggle('on',d);
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+function toast(msg) {
+  let el = document.getElementById('_toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id='_toast';
+    el.style='position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--ink-fg);font-size:13px;padding:10px 18px;border-radius:10px;z-index:999;font-family:var(--sans);transition:all .25s;opacity:0;transform:translateY(8px)';
+    document.body.appendChild(el);
+  }
+  el.textContent=msg;
+  el.style.opacity='1'; el.style.transform='translateY(0)';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(8px)'; },2500);
+}
+</script>
+</body>
+</html>
