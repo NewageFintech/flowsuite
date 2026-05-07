@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowReports — Reports Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root{--bg:#F4F2ED;--surface:#FFF;--s2:#F8F7F3;--border:#E2DDD5;--border2:#CCC8BE;--text:#1A1916;--t2:#6B6760;--t3:#9C9890;--ink:#1A1916;--ink-fg:#F4F2ED;--green:#1C6B4A;--gbg:#E8F5EE;--amber:#8A5A0A;--abg:#FDF3DC;--red:#8B2020;--rbg:#FDEAEA;--blue:#1A3B6E;--bbg:#E8EFF9;--purple:#4A2080;--pbg:#F0EAFA;--sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;--r:10px;--rl:16px}
+body.dark{--bg:#111110;--surface:#1C1B19;--s2:#242320;--border:#2E2D2A;--border2:#3D3C38;--text:#F0EEE9;--t2:#A09D97;--t3:#6B6860;--ink:#F0EEE9;--ink-fg:#111110;--green:#2D9E6B;--gbg:#0D2B1E;--amber:#C98A2A;--abg:#2A1E08;--red:#D94F4F;--rbg:#2A0F0F;--blue:#4A7FD4;--bbg:#0D1E38;--purple:#8A5FD4;--pbg:#1A0D38}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+#loginScreen{display:none;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)}
+.lc{background:var(--surface);border-radius:20px;padding:40px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.3)}
+.lc-logo{font-size:22px;font-weight:600;letter-spacing:-.5px;margin-bottom:2px}
+.lc-sub{font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:28px}
+.li{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--surface);outline:none;margin-bottom:12px;display:block;transition:border-color .15s}
+.li:focus{border-color:var(--border2)}
+.li-label{font-size:12px;font-weight:500;color:var(--t2);margin-bottom:5px;display:block}
+.login-btn{width:100%;padding:11px;background:var(--ink);color:var(--ink-fg);border:none;border-radius:9px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;margin-top:4px}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{font-size:12px;color:var(--red);background:var(--rbg);border:1px solid #f0b0b0;border-radius:8px;padding:8px 12px;margin-top:10px;display:none}
+.back-link{display:block;text-align:center;margin-top:16px;font-size:12px;color:var(--t3);text-decoration:none}
+.back-link:hover{color:var(--blue)}
+#appShell{display:none}
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:250px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.logo-area{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-mark{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.logo-tag{font-size:10px;font-family:var(--mono);color:var(--t3);margin-top:1px}
+.nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nsec{font-size:10px;font-weight:500;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;padding:8px 10px 4px}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--t2);transition:all .15s;margin-bottom:1px;user-select:none}
+.ni:hover{background:var(--s2);color:var(--text)}
+.ni.active{background:var(--ink);color:var(--ink-fg)}
+.ni svg{width:16px;height:16px;flex-shrink:0}
+.sidebar-foot{padding:12px 14px;border-top:1px solid var(--border);font-size:12px;display:flex;flex-direction:column;gap:3px}
+.foot-name{font-weight:500;font-size:13px}
+.foot-link{font-size:11px;color:var(--blue);text-decoration:none;display:block;margin-top:1px}
+.foot-link:hover{text-decoration:underline}
+.logout-btn{background:none;border:none;font-family:var(--sans);font-size:11px;color:var(--t3);cursor:pointer;text-align:left;padding:0;margin-top:2px}
+.logout-btn:hover{color:var(--red)}
+.sync-row{display:flex;align-items:center;gap:5px;margin-top:2px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.sync-dot.warn{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:500;flex:1}
+.btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:7px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;color:var(--text);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--s2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-dark{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.btn-dark:hover{background:#2d2c28}
+.btn-sm{font-size:12px;padding:5px 10px;border-radius:6px}
+.section{padding:16px 24px 24px}
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.section-title{font-size:15px;font-weight:500}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:20px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.rcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:20px;cursor:pointer;transition:all .15s}
+.rcard:hover{border-color:var(--border2);box-shadow:0 4px 16px rgba(0,0,0,.06);transform:translateY(-1px)}
+.rcard-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.rcard-icon svg{width:20px;height:20px}
+.rcard-name{font-size:14px;font-weight:500;margin-bottom:4px}
+.rcard-desc{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:14px}
+.rcard-tags{display:flex;gap:6px;flex-wrap:wrap}
+.rtag{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--s2);color:var(--t3);border:1px solid var(--border)}
+.mo{display:none;position:fixed;inset:0;background:rgba(26,25,22,.55);z-index:200;align-items:center;justify-content:center;padding:20px}
+.mo.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);width:100%;max-width:620px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.18)}
+.mhd{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.mhd h3{font-size:15px;font-weight:500}
+.mclose{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:18px;line-height:1}
+.mclose:hover{background:var(--s2)}
+.mbody{padding:20px 24px}
+.fsec{margin-bottom:18px}
+.fsec-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.frow{display:flex;flex-direction:column;gap:5px}
+.frow label{font-size:12px;font-weight:500;color:var(--t2)}
+.frow input,.frow select,.frow textarea{font-family:var(--sans);font-size:13px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+.frow input:focus,.frow select:focus{border-color:var(--border2)}
+.mfoot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:var(--surface)}
+.fmt-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.fmt-pill{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--t2);font-family:var(--sans);transition:all .15s}
+.fmt-pill.active{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.preview-box{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:12px;font-family:var(--mono);color:var(--t2);max-height:220px;overflow-y:auto;white-space:pre-wrap;line-height:1.6;margin-top:8px}
+.recipient-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rtag-pill{background:var(--bbg);color:var(--blue);font-size:11px;padding:3px 10px;border-radius:20px;display:flex;align-items:center;gap:5px;font-family:var(--mono)}
+.rtag-remove{cursor:pointer;opacity:.6;font-size:14px;line-height:1}
+.rtag-remove:hover{opacity:1}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px}
+.kpi-label{font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.kpi-value{font-size:24px;font-weight:300;letter-spacing:-1px;font-family:var(--mono)}
+.kpi-value.up{color:var(--green)}.kpi-value.warn{color:var(--amber)}.kpi-value.down{color:var(--red)}
+.kpi-sub{font-size:11px;color:var(--t3);margin-top:3px}
+.report-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:14px;overflow:hidden}
+.report-block-hd{padding:12px 16px;background:var(--s2);border-bottom:1px solid var(--border);font-size:13px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.report-block-body{padding:0}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--s2)}
+th{text-align:left;padding:9px 14px;font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--s2)}
+.mono{font-family:var(--mono);font-size:12px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.bdot{width:5px;height:5px;border-radius:50%;opacity:.6}
+.b-green{background:var(--gbg);color:var(--green)}.b-red{background:var(--rbg);color:var(--red)}
+.b-amber{background:var(--abg);color:var(--amber)}.b-blue{background:var(--bbg);color:var(--blue)}
+.b-gray{background:var(--s2);color:var(--t2);border:1px solid var(--border)}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--t2);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;gap:10px;color:var(--t3);font-size:13px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--ink-fg);font-size:13px;padding:10px 18px;border-radius:10px;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;font-family:var(--sans)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{background:var(--red)}.toast.ok{background:var(--green)}
+.dark-toggle{display:flex;align-items:center;gap:7px;background:none;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--t2);padding:0;margin-top:4px}
+.tog-track{width:28px;height:16px;border-radius:20px;background:var(--border2);position:relative;transition:background .2s;flex-shrink:0}
+.tog-track.on{background:var(--ink)}
+body.dark .tog-track.on{background:var(--text)}
+.tog-thumb{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tog-track.on .tog-thumb{transform:translateX(12px)}
+@media print{.sidebar,.topbar,.no-print{display:none}.main{overflow:visible}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="lc">
+    <div class="lc-logo">FlowReports</div>
+    <div class="lc-sub">Reports Hub · anlsco</div>
+    <label class="li-label">Email</label>
+    <input class="li" id="loginEmail" type="email" placeholder="you@anls.com" autocomplete="email">
+    <label class="li-label">Password</label>
+    <input class="li" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="loginErr"></div>
+    <a class="back-link" href="index.html">← Back to FlowSuite</a>
+  </div>
+</div>
+
+<div id="appShell">
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-mark">FlowReports</div>
+      <div class="logo-tag">Reports hub</div>
+    </div>
+    <nav class="nav">
+      <div class="nsec">Overview</div>
+      <div class="ni active" id="nav-dashboard" onclick="showView('dashboard')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/></svg>
+        <span>Dashboard</span>
+      </div>
+      <div class="nsec">Operations</div>
+      <div class="ni" id="nav-ops-summary" onclick="showView('ops-summary')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="4" height="12" rx="1.5" fill="currentColor" opacity=".4"/><rect x="6" y="4" width="4" height="10" rx="1.5" fill="currentColor" opacity=".7"/><rect x="11" y="6" width="4" height="8" rx="1.5" fill="currentColor"/></svg>
+        <span>PO pipeline report</span>
+      </div>
+      <div class="ni" id="nav-ops-aging" onclick="showView('ops-aging')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Jobs aging report</span>
+      </div>
+      <div class="nsec">Finance</div>
+      <div class="ni" id="nav-fin-ar" onclick="showView('fin-ar')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>AR report</span>
+      </div>
+      <div class="ni" id="nav-fin-ap" onclick="showView('fin-ap')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>AP report</span>
+      </div>
+      <div class="ni" id="nav-fin-pl" onclick="showView('fin-pl')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12L5 8l3 2 3-5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>P&amp;L summary</span>
+      </div>
+      <div class="nsec">HR</div>
+      <div class="ni" id="nav-hr-headcount" onclick="showView('hr-headcount')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M1 13c0-2.76 2.24-5 5-5M11 10v4M13 12h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Headcount report</span>
+      </div>
+      <div class="ni" id="nav-hr-payroll" onclick="showView('hr-payroll')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span>Payroll report</span>
+      </div>
+      <div class="nsec">Custom</div>
+      <div class="ni" id="nav-custom" onclick="showView('custom')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Custom report</span>
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="foot-name" id="sf-name">—</div>
+      <div class="sync-row"><span class="sync-dot warn" id="syncDot"></span><span style="font-size:11px;color:var(--t3)" id="syncLabel">Loading…</span></div>
+      <a class="foot-link" href="index.html">⌂ FlowSuite home</a>
+      <button class="dark-toggle" onclick="toggleDark()"><span class="tog-track" id="darkTrack"><span class="tog-thumb"></span></span><span id="darkLabel">Dark mode</span></button>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar no-print">
+      <div class="topbar-title" id="viewTitle">Dashboard</div>
+      <button class="btn" onclick="loadAll()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 118 2.5c2 0 3.7 1 4.7 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+      <button class="btn" onclick="window.print()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="3" y="10" width="10" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M3 6H1v6h14V6h-2" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        Print / PDF
+      </button>
+      <button class="btn btn-dark" onclick="openExportModal()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Export / Email
+      </button>
+    </div>
+    <div id="viewContent" style="padding:4px 0"></div>
+  </main>
+</div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="mo" id="exportMo">
+  <div class="modal">
+    <div class="mhd"><h3>Export &amp; email report</h3><button class="mclose" onclick="document.getElementById('exportMo').classList.remove('open')">×</button></div>
+    <div class="mbody">
+      <div class="fsec">
+        <div class="fsec-title">Format</div>
+        <div class="fmt-pills">
+          <button class="fmt-pill active" id="fp-csv" onclick="setFmt('csv',this)">📊 CSV</button>
+          <button class="fmt-pill" id="fp-excel" onclick="setFmt('excel',this)">📗 Excel</button>
+          <button class="fmt-pill" id="fp-pdf" onclick="setFmt('pdf',this)">📑 PDF (print)</button>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Email recipients <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--t3)">(optional — leave empty to just download)</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="recipientInput" style="flex:1;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;outline:none;background:var(--surface);color:var(--text)" placeholder="name@anls.com" onkeydown="if(event.key==='Enter')addRecipient()">
+          <button class="btn btn-sm" onclick="addRecipient()">Add</button>
+        </div>
+        <div class="recipient-tags" id="recipientTags"></div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Preview</div>
+        <div class="preview-box" id="exportPreview">Loading…</div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div style="font-size:12px;color:var(--t3)" id="exportStatus"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="document.getElementById('exportMo').classList.remove('open')">Cancel</button>
+        <button class="btn btn-dark" id="exportBtn" onclick="doExport()">Download / Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL='https://pqcjhdrvqzcsvddimwaq.supabase.co';
+const SUPA_KEY='sb_publishable_Que35EYrhPKCFzQuz9Okog_QkU0fbmh';
+const EJS_SERVICE='service_yhm9xir';
+const EJS_TEMPLATE='template_klzqzn8';
+const EJS_KEY='bxA6rUISacTkkQIg7';
+const {createClient}=supabase;
+const db=createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,detectSessionInUrl:true,storageKey:'flowsuite-auth',storage:window.localStorage}});
+
+async function initSession(){
+  const hash=window.location.hash.slice(1);
+  if(hash){const p=new URLSearchParams(hash);const at=p.get('access_token'),rt=p.get('refresh_token');if(at&&rt){history.replaceState(null,'',window.location.pathname);const{data,error}=await db.auth.setSession({access_token:at,refresh_token:rt});if(!error&&data?.user){await initApp(data.user);return;}}}
+  const{data:{session}}=await db.auth.getSession();
+  if(session?.user){await initApp(session.user);return;}
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+let currentUser=null,currentView='dashboard';
+let jobs=[],invoices=[],bills=[],employees=[],payrollRuns=[],bankTxs=[];
+let recipients=[],exportFmt='csv';
+
+function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type?' '+type:'');clearTimeout(el._t);el._t=setTimeout(()=>el.className='toast',2800);}
+function setSync(s){const d=document.getElementById('syncDot'),l=document.getElementById('syncLabel');d.className='sync-dot'+(s==='ok'?'':s==='err'?' err':' warn');l.textContent=s==='ok'?'Synced':s==='err'?'Error':'Loading…';}
+function fmt(n,d=0){return n?Number(n).toLocaleString('en-SA',{minimumFractionDigits:d,maximumFractionDigits:d}):'0';}
+function fmtSAR(n){return'SAR '+fmt(n,2);}
+function daysAgo(d){return d?Math.floor((new Date()-new Date(d))/86400000):0;}
+
+async function initApp(user){
+  const{data:profile}=await db.from('profiles').select('*').eq('id',user.id).single();
+  if(profile?.role==='operations'){await db.auth.signOut();document.getElementById('loginScreen').style.display='flex';showErr('Reports access requires Finance or Admin role.');return;}
+  currentUser=user;
+  document.getElementById('sf-name').textContent=profile?.full_name||user.email;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  if(localStorage.getItem('flowtrack-dark')==='1'){document.body.classList.add('dark');updateDarkUI(true);}
+  await loadAll();
+}
+
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const btn=document.getElementById('loginBtn');
+  if(!email||!pass){showErr('Enter email and password.');return;}
+  btn.disabled=true;btn.textContent='Signing in…';document.getElementById('loginErr').style.display='none';
+  try{const{data,error}=await db.auth.signInWithPassword({email,password:pass});if(error)throw error;await initApp(data.user);}
+  catch(e){showErr(e.message);btn.disabled=false;btn.textContent='Sign in';}
+}
+function showErr(msg){const e=document.getElementById('loginErr');e.textContent=msg;e.style.display='block';document.getElementById('loginBtn').disabled=false;document.getElementById('loginBtn').textContent='Sign in';}
+async function doLogout(){await db.auth.signOut();document.getElementById('appShell').style.display='none';document.getElementById('loginScreen').style.display='flex';}
+
+async function loadAll(){
+  setSync('loading');
+  try{
+    const[j,inv,bill,emp,pay,bank]=await Promise.all([
+      db.from('jobs').select('*').order('created_at',{ascending:false}),
+      db.from('ledger_invoices').select('*').order('issue_date',{ascending:false}),
+      db.from('ledger_bills').select('*').order('bill_date',{ascending:false}),
+      db.from('hr_employees').select('*').order('first_name'),
+      db.from('hr_payroll').select('*').order('created_at',{ascending:false}),
+      db.from('bank_transactions').select('*').order('date',{ascending:false}),
+    ]);
+    jobs=j.data||[];invoices=inv.data||[];bills=bill.data||[];
+    employees=emp.data||[];payrollRuns=pay.data||[];bankTxs=bank.data||[];
+    setSync('ok');render();
+  }catch(e){setSync('err');toast('Load failed: '+e.message,'err');}
+}
+
+const VIEW_TITLES={'dashboard':'Reports dashboard','ops-summary':'PO pipeline report','ops-aging':'Jobs aging report','fin-ar':'Accounts receivable report','fin-ap':'Accounts payable report','fin-pl':'Profit & Loss summary','hr-headcount':'Headcount report','hr-payroll':'Payroll report','custom':'Custom report'};
+
+function showView(v){
+  currentView=v;
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  const ni=document.getElementById('nav-'+v);if(ni)ni.classList.add('active');
+  document.getElementById('viewTitle').textContent=VIEW_TITLES[v]||v;
+  render();
+}
+
+function render(){
+  const vc=document.getElementById('viewContent');
+  const views={'dashboard':renderDashboard,'ops-summary':renderOpsSummary,'ops-aging':renderOpsAging,'fin-ar':renderFinAR,'fin-ap':renderFinAP,'fin-pl':renderFinPL,'hr-headcount':renderHRHeadcount,'hr-payroll':renderHRPayroll,'custom':renderCustom};
+  (views[currentView]||renderDashboard)(vc);
+  updatePreview();
+}
+
+// ── STATUS BADGE ──────────────────────────────────────────────
+const STATUS_BADGE_CLS={'PO Received':'b-gray','Quotation Sent':'b-blue','Quote Approved':'b-blue','Pending Invoice':'b-amber','Invoiced':'b-green','Overdue':'b-red','Partial Payment':'b-amber','Paid in Full':'b-green'};
+function badge(s){return`<span class="badge ${STATUS_BADGE_CLS[s]||'b-gray'}"><span class="bdot" style="background:currentColor"></span>${s||'—'}</span>`;}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function renderDashboard(c){
+  const openJobs=jobs.filter(j=>j.status!=='Paid in Full').length;
+  const pendingInv=jobs.filter(j=>j.status==='Pending Invoice').length;
+  const overdueJobs=jobs.filter(j=>j.status==='Overdue').length;
+  const totalAR=invoices.filter(i=>i.status!=='Paid'&&i.status!=='Void').reduce((s,i)=>s+(i.amount||0),0);
+  const totalAP=bills.filter(b=>b.status==='Unpaid'||b.status==='Partial').reduce((s,b)=>s+(b.amount||0),0);
+  const activeEmp=employees.filter(e=>e.status==='Active').length;
+  const monthlyPayroll=employees.filter(e=>e.status==='Active').reduce((s,e)=>s+(e.basic_salary||0)+(e.housing_allowance||0)+(e.transport_allowance||0),0);
+  const bankBal=bankTxs.reduce((s,t)=>s+(t.type==='credit'?1:-1)*(t.amount||0),0);
+  c.innerHTML=`<div class="section">
+    <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi"><div class="kpi-label">Open jobs</div><div class="kpi-value">${openJobs}</div><div class="kpi-sub">${pendingInv} pending invoice</div></div>
+      <div class="kpi"><div class="kpi-label">AR outstanding</div><div class="kpi-value warn">${fmt(totalAR)}</div><div class="kpi-sub">SAR</div></div>
+      <div class="kpi"><div class="kpi-label">AP outstanding</div><div class="kpi-value warn">${fmt(totalAP)}</div><div class="kpi-sub">SAR</div></div>
+      <div class="kpi"><div class="kpi-label">Bank balance</div><div class="kpi-value ${bankBal>=0?'up':'down'}">${fmt(bankBal)}</div><div class="kpi-sub">SAR</div></div>
+      <div class="kpi"><div class="kpi-label">Active employees</div><div class="kpi-value">${activeEmp}</div><div class="kpi-sub">Headcount</div></div>
+      <div class="kpi"><div class="kpi-label">Monthly payroll</div><div class="kpi-value">${fmt(monthlyPayroll)}</div><div class="kpi-sub">SAR / month</div></div>
+      <div class="kpi"><div class="kpi-label">Overdue jobs</div><div class="kpi-value ${overdueJobs>0?'down':''}">${overdueJobs}</div><div class="kpi-sub">Needs attention</div></div>
+      <div class="kpi"><div class="kpi-label">Total reports</div><div class="kpi-value">8</div><div class="kpi-sub">Available</div></div>
+    </div>
+    <div class="section-title" style="margin-bottom:14px">Available reports</div>
+    <div class="cards-grid">
+      ${[
+        {id:'ops-summary',name:'PO pipeline report',desc:'All open jobs by status, client, and value.',icon:'#E8EFF9',ic:'#1A3B6E'},
+        {id:'ops-aging',name:'Jobs aging report',desc:'Jobs by days open — identify stale or overdue records.',icon:'#FDF3DC',ic:'#8A5A0A'},
+        {id:'fin-ar',name:'AR report',desc:'Outstanding invoices, overdue amounts, and payment history.',icon:'#E8F5EE',ic:'#1C6B4A'},
+        {id:'fin-ap',name:'AP report',desc:'Unpaid bills, vendor summary, and payment schedule.',icon:'#FDEAEA',ic:'#8B2020'},
+        {id:'fin-pl',name:'P&L summary',desc:'Revenue vs expenses from FlowLedger invoices and bills.',icon:'#FDF3DC',ic:'#8A5A0A'},
+        {id:'hr-headcount',name:'Headcount report',desc:'Employee breakdown by department, type, and status.',icon:'#F0EAFA',ic:'#4A2080'},
+        {id:'hr-payroll',name:'Payroll report',desc:'Salary breakdown and payroll run history.',icon:'#E8EFF9',ic:'#1A3B6E'},
+        {id:'custom',name:'Custom report',desc:'Select modules and fields to build a custom export.',icon:'#F8F7F3',ic:'#6B6760'},
+      ].map(r=>`<div class="rcard" onclick="showView('${r.id}')">
+        <div class="rcard-icon" style="background:${r.icon};color:${r.ic}"><svg viewBox="0 0 16 16" fill="none"><path d="M2 12L5 8l3 2 3-5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="rcard-name">${r.name}</div>
+        <div class="rcard-desc">${r.desc}</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ── OPS SUMMARY ────────────────────────────────────────────────
+function renderOpsSummary(c){
+  const open=jobs.filter(j=>j.status!=='Paid in Full');
+  const totalVal=open.reduce((s,j)=>s+(j.value||0),0);
+  const byStatus={};open.forEach(j=>{byStatus[j.status]=(byStatus[j.status]||0)+1;});
+  c.innerHTML=`<div class="section">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Open jobs</div><div class="kpi-value">${open.length}</div></div>
+      <div class="kpi"><div class="kpi-label">Total pipeline</div><div class="kpi-value warn">${fmt(totalVal)}</div><div class="kpi-sub">SAR</div></div>
+      <div class="kpi"><div class="kpi-label">Missing quote</div><div class="kpi-value down">${open.filter(j=>!j.quote_no).length}</div></div>
+      <div class="kpi"><div class="kpi-label">Overdue</div><div class="kpi-value down">${open.filter(j=>j.status==='Overdue').length}</div></div>
+    </div>
+    <div class="report-block">
+      <div class="report-block-hd">All open jobs</div>
+      <div class="report-block-body"><table>
+        <thead><tr><th>PO #</th><th>Client</th><th>Description</th><th>PO Date</th><th>Quote #</th><th style="text-align:right">Value (SAR)</th><th>Status</th><th>Days open</th></tr></thead>
+        <tbody>${open.map(j=>`<tr>
+          <td class="mono">${j.po||'—'}</td>
+          <td style="font-weight:500">${j.client||'—'}</td>
+          <td style="color:var(--t2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${j.description||'—'}</td>
+          <td class="mono">${j.po_date||'—'}</td>
+          <td class="mono" style="${!j.quote_no?'color:var(--red)':''}">${j.quote_no||'⚠ Missing'}</td>
+          <td class="mono" style="text-align:right">${fmt(j.value)}</td>
+          <td>${badge(j.status)}</td>
+          <td class="mono" style="${daysAgo(j.po_date)>60?'color:var(--red)':daysAgo(j.po_date)>30?'color:var(--amber)':''}">${daysAgo(j.po_date)}d</td>
+        </tr>`).join('')}
+        <tr style="background:var(--s2);font-weight:600"><td colspan="5">Totals</td><td class="mono" style="text-align:right">${fmt(totalVal)}</td><td colspan="2"></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>`;
+}
+
+// ── OPS AGING ─────────────────────────────────────────────────
+function renderOpsAging(c){
+  const open=jobs.filter(j=>j.status!=='Paid in Full');
+  const buckets=[{l:'0–15 days',fn:j=>daysAgo(j.po_date)<=15},{l:'16–30 days',fn:j=>{const d=daysAgo(j.po_date);return d>15&&d<=30;}},{l:'31–60 days',fn:j=>{const d=daysAgo(j.po_date);return d>30&&d<=60;}},{l:'61–90 days',fn:j=>{const d=daysAgo(j.po_date);return d>60&&d<=90;}},{l:'90+ days',fn:j=>daysAgo(j.po_date)>90}];
+  c.innerHTML=`<div class="section">
+    <div class="report-block"><div class="report-block-hd">Aging summary</div>
+      <div class="report-block-body"><table>
+        <thead><tr><th>Age bucket</th><th>Jobs</th><th style="text-align:right">Total value (SAR)</th></tr></thead>
+        <tbody>${buckets.map(b=>{const bj=open.filter(b.fn);const bv=bj.reduce((s,j)=>s+(j.value||0),0);return`<tr><td style="font-weight:500">${b.l}</td><td class="mono">${bj.length}</td><td class="mono" style="text-align:right">${fmt(bv)}</td></tr>`;}).join('')}</tbody>
+      </table></div>
+    </div>
+    <div class="report-block"><div class="report-block-hd">All open jobs — sorted by age</div>
+      <div class="report-block-body"><table>
+        <thead><tr><th>PO #</th><th>Client</th><th>Status</th><th>PO Date</th><th>Days open</th><th style="text-align:right">Value (SAR)</th></tr></thead>
+        <tbody>${[...open].sort((a,b)=>daysAgo(b.po_date)-daysAgo(a.po_date)).map(j=>{const d=daysAgo(j.po_date);return`<tr>
+          <td class="mono">${j.po||'—'}</td><td style="font-weight:500">${j.client||'—'}</td>
+          <td>${badge(j.status)}</td><td class="mono">${j.po_date||'—'}</td>
+          <td class="mono" style="${d>60?'color:var(--red);font-weight:500':d>30?'color:var(--amber)':''}">${d}d</td>
+          <td class="mono" style="text-align:right">${fmt(j.value)}</td>
+        </tr>`;}).join('')}</tbody>
+      </table></div>
+    </div>
+  </div>`;
+}
+
+// ── FINANCE AR ─────────────────────────────────────────────────
+function renderFinAR(c){
+  const unpaid=invoices.filter(i=>i.status!=='Paid'&&i.status!=='Void');
+  const totalUnpaid=unpaid.reduce((s,i)=>s+(i.amount||0),0);
+  const totalOverdue=invoices.filter(i=>i.status==='Overdue').reduce((s,i)=>s+((i.amount||0)-(i.amount_paid||0)),0);
+  c.innerHTML=`<div class="section">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Outstanding</div><div class="kpi-value warn">${fmt(totalUnpaid)}</div><div class="kpi-sub">SAR</div></div>
+      <div class="kpi"><div class="kpi-label">Overdue</div><div class="kpi-value down">${fmt(totalOverdue)}</div><div class="kpi-sub">SAR</div></div>
+      <div class="kpi"><div class="kpi-label">Unpaid invoices</div><div class="kpi-value">${unpaid.length}</div></div>
+      <div class="kpi"><div class="kpi-label">Paid (all time)</div><div class="kpi-value up">${fmt(invoices.filter(i=>i.status==='Paid').reduce((s,i)=>s+(i.amount||0),0))}</div><div class="kpi-sub">SAR</div></div>
+    </div>
+    <div class="report-block"><div class="report-block-hd">All invoices</div>
+      <div class="report-block-body"><table>
+        <thead><tr><th>Invoice #</th><th>Client</th><th>Issue date</th><th>Due date</th><th style="text-align:right">Amount</th><th style="text-align:right">Balance</th><th>Status</th><th>Days overdue</th></tr></thead>
+        <tbody>${invoices.map(i=>{const bal=(i.amount||0)-(i.amount_paid||0);const ov=i.due_date&&new Date(i.due_date)<new Date()&&i.status!=='Paid';return`<tr>
+          <td class="mono">${i.invoice_num||'—'}</td><td style="font-weight:500">${i.client||'—'}</td>
+          <td class="mono">${i.issue_date||'—'}</td><td class="mono" style="${ov?'color:var(--red)':''}">${i.due_date||'—'}</td>
+          <td class="mono" style="text-align:right">${fmt(i.amount,2)}</td>
+          <td class="mono" style="text-align:right;color:${bal>0?'var(--amber)':'var(--green)'}">${fmt(bal,2)}</td>
+          <td><span class="badge ${'Paid'===i.status?'b-green':'Overdue'===i.status?'b-red':'b-amber'}"><span class="bdot" style="background:currentColor"></span>${i.status||'—'}</span></td>
+          <td class="mono" style="${ov?'color:var(--red)':'color:var(--t3)'}">${ov?daysAgo(i.due_date)+'d':'—'}</td>
+        </tr>`;}).join('')}</tbody>
+      </table></div>
+    </div>
+  </div>`;
+}
+
+// ── FINANCE AP ─────────────────────────────────────────────────
+function renderFinAP(c){
+  const unpaid=bills.filter(b=>b.status==='Unpaid'||b.status==='Partial');
+  const totalUnpaid=unpaid.reduce((s,b)=>s+(b.amount||0),0);
+  c.innerHTML=`<div class="section">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Total unpaid</div><div class="kpi-value warn">${fmt(totalUnpaid)}</div><div class="kpi-sub">SAR</div></div>
+      <div class="kpi"><div class="kpi-label">Open bills</div><div class="kpi-value">${unpaid.length}</div></div>
+      <div class="kpi"><div class="kpi-label">Total bills</div><div class="kpi-value">${bills.length}</div></div>
+      <div class="kpi"><div class="kpi-label">Paid bills</div><div class="kpi-value up">${bills.filter(b=>b.status==='Paid').length}</div></div>
+    </div>
+    <div class="report-block"><div class="report-block-hd">All bills</div>
+      <div class="report-block-body"><table>
+        <thead><tr><th>Bill #</th><th>Vendor</th><th>Category</th><th>Bill date</th><th>Due date</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
+        <tbody>${bills.map(b=>`<tr>
+          <td class="mono">${b.bill_num||'—'}</td><td style="font-weight:500">${b.vendor||'—'}</td>
+          <td><span class="badge b-gray">${b.category||'—'}</span></td>
+          <td class="mono">${b.bill_date||'—'}</td><td class="mono">${b.due_date||'—'}</td>
+          <td class="mono" style="text-align:right">${fmt(b.amount,2)}</td>
+          <td><span class="badge ${'Paid'===b.status?'b-green':'Unpaid'===b.status?'b-red':'b-amber'}"><span class="bdot" style="background:currentColor"></span>${b.status||'—'}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+  </div>`;
+}
+
+// ── FINANCE P&L ────────────────────────────────────────────────
+function renderFinPL(c){
+  const revenue=invoices.filter(i=>i.status==='Paid').reduce((s,i)=>s+(i.amount||0),0);
+  const expenses=bills.filter(b=>b.status==='Paid').reduce((s,b)=>s+(b.amount||0),0);
+  const cats={};bills.filter(b=>b.status==='Paid').forEach(b=>{cats[b.category||'Other']=(cats[b.category||'Other']||0)+(b.amount||0);});
+  const net=revenue-expenses;
+  c.innerHTML=`<div class="section">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Revenue</div><div class="kpi-value up">${fmt(revenue)}</div><div class="kpi-sub">SAR — paid invoices</div></div>
+      <div class="kpi"><div class="kpi-label">Expenses</div><div class="kpi-value down">${fmt(expenses)}</div><div class="kpi-sub">SAR — paid bills</div></div>
+      <div class="kpi"><div class="kpi-label">Net income</div><div class="kpi-value ${net>=0?'up':'down'}">${fmt(net)}</div><div class="kpi-sub">SAR</div></div>
+      <div class="kpi"><div class="kpi-label">Margin</div><div class="kpi-value ${net>=0?'up':'down'}">${revenue?Math.round(net/revenue*100):0}%</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="report-block"><div class="report-block-hd">Revenue</div>
+        <div class="report-block-body" style="padding:14px 16px">
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><span>Service revenue (invoices)</span><span class="mono">${fmtSAR(revenue)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:600;font-size:14px"><span>Total revenue</span><span class="mono" style="color:var(--green)">${fmtSAR(revenue)}</span></div>
+        </div>
+      </div>
+      <div class="report-block"><div class="report-block-hd">Expenses by category</div>
+        <div class="report-block-body" style="padding:14px 16px">
+          ${Object.entries(cats).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${k}</span><span class="mono">${fmtSAR(v)}</span></div>`).join('')}
+          <div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:600;font-size:14px"><span>Total expenses</span><span class="mono" style="color:var(--red)">${fmtSAR(expenses)}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="report-block" style="margin-top:0"><div class="report-block-hd" style="background:${net>=0?'var(--gbg)':'var(--rbg)'};color:${net>=0?'var(--green)':'var(--red)'}">Net income: ${fmtSAR(net)}</div></div>
+  </div>`;
+}
+
+// ── HR HEADCOUNT ───────────────────────────────────────────────
+function renderHRHeadcount(c){
+  const active=employees.filter(e=>e.status==='Active');
+  const deptMap={};active.forEach(e=>{deptMap[e.department||'Other']=(deptMap[e.department||'Other']||0)+1;});
+  const typeMap={};active.forEach(e=>{typeMap[e.employment_type||'Full-time']=(typeMap[e.employment_type||'Full-time']||0)+1;});
+  const expiring=employees.filter(e=>{if(!e.iqama_expiry)return false;const d=(new Date(e.iqama_expiry)-new Date())/86400000;return d>0&&d<=60;});
+  c.innerHTML=`<div class="section">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Active</div><div class="kpi-value up">${active.length}</div></div>
+      <div class="kpi"><div class="kpi-label">On leave</div><div class="kpi-value warn">${employees.filter(e=>e.status==='On leave').length}</div></div>
+      <div class="kpi"><div class="kpi-label">Probation</div><div class="kpi-value">${employees.filter(e=>e.status==='Probation').length}</div></div>
+      <div class="kpi"><div class="kpi-label">Iqama expiring</div><div class="kpi-value ${expiring.length?'down':''}">${expiring.length}</div><div class="kpi-sub">Within 60 days</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="report-block"><div class="report-block-hd">By department</div>
+        <div class="report-block-body"><table><thead><tr><th>Department</th><th>Count</th><th>%</th></tr></thead>
+        <tbody>${Object.entries(deptMap).sort((a,b)=>b[1]-a[1]).map(([d,n])=>`<tr><td style="font-weight:500">${d}</td><td class="mono">${n}</td><td class="mono" style="color:var(--t3)">${Math.round(n/active.length*100)}%</td></tr>`).join('')}</tbody></table></div>
+      </div>
+      <div class="report-block"><div class="report-block-hd">By employment type</div>
+        <div class="report-block-body"><table><thead><tr><th>Type</th><th>Count</th></tr></thead>
+        <tbody>${Object.entries(typeMap).map(([t,n])=>`<tr><td style="font-weight:500">${t}</td><td class="mono">${n}</td></tr>`).join('')}</tbody></table></div>
+      </div>
+    </div>
+    ${expiring.length?`<div class="report-block"><div class="report-block-hd" style="background:var(--abg);color:var(--amber)">⚠ Iqama expiring within 60 days</div>
+      <div class="report-block-body"><table><thead><tr><th>Employee</th><th>Department</th><th>Iqama expiry</th><th>Days left</th></tr></thead>
+      <tbody>${expiring.map(e=>`<tr><td style="font-weight:500">${e.first_name} ${e.last_name}</td><td>${e.department||'—'}</td><td class="mono" style="color:var(--amber)">${e.iqama_expiry}</td><td class="mono" style="color:var(--amber)">${Math.floor((new Date(e.iqama_expiry)-new Date())/86400000)}d</td></tr>`).join('')}</tbody></table></div></div>`:''}
+    <div class="report-block"><div class="report-block-hd">All employees</div>
+      <div class="report-block-body"><table><thead><tr><th>Name</th><th>Title</th><th>Department</th><th>Type</th><th>Start date</th><th>Status</th></tr></thead>
+      <tbody>${employees.map(e=>`<tr><td style="font-weight:500">${e.first_name} ${e.last_name}</td><td style="color:var(--t2)">${e.job_title||'—'}</td><td>${e.department||'—'}</td><td>${e.employment_type||'—'}</td><td class="mono">${e.start_date||'—'}</td>
+        <td><span class="badge ${'Active'===e.status?'b-green':'Terminated'===e.status?'b-red':'b-amber'}"><span class="bdot" style="background:currentColor"></span>${e.status}</span></td></tr>`).join('')}</tbody></table></div>
+    </div>
+  </div>`;
+}
+
+// ── HR PAYROLL ─────────────────────────────────────────────────
+function renderHRPayroll(c){
+  const active=employees.filter(e=>e.status==='Active');
+  const totalBasic=active.reduce((s,e)=>s+(e.basic_salary||0),0);
+  const totalHousing=active.reduce((s,e)=>s+(e.housing_allowance||0),0);
+  const totalTransport=active.reduce((s,e)=>s+(e.transport_allowance||0),0);
+  c.innerHTML=`<div class="section">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Basic salaries</div><div class="kpi-value">${fmt(totalBasic)}</div><div class="kpi-sub">SAR / month</div></div>
+      <div class="kpi"><div class="kpi-label">Allowances</div><div class="kpi-value">${fmt(totalHousing+totalTransport)}</div><div class="kpi-sub">SAR / month</div></div>
+      <div class="kpi"><div class="kpi-label">Total payroll</div><div class="kpi-value warn">${fmt(totalBasic+totalHousing+totalTransport)}</div><div class="kpi-sub">SAR / month</div></div>
+      <div class="kpi"><div class="kpi-label">Payroll runs</div><div class="kpi-value">${payrollRuns.length}</div></div>
+    </div>
+    <div class="report-block"><div class="report-block-hd">Employee compensation detail</div>
+      <div class="report-block-body"><table><thead><tr><th>Employee</th><th>Department</th><th style="text-align:right">Basic</th><th style="text-align:right">Housing</th><th style="text-align:right">Transport</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody>${active.map(e=>{const t=(e.basic_salary||0)+(e.housing_allowance||0)+(e.transport_allowance||0);return`<tr><td style="font-weight:500">${e.first_name} ${e.last_name}</td><td>${e.department||'—'}</td><td class="mono" style="text-align:right">${fmt(e.basic_salary)}</td><td class="mono" style="text-align:right">${fmt(e.housing_allowance)}</td><td class="mono" style="text-align:right">${fmt(e.transport_allowance)}</td><td class="mono" style="text-align:right;font-weight:500">${fmt(t)}</td></tr>`;}).join('')}
+      <tr style="background:var(--s2);font-weight:600"><td colspan="2">Totals</td><td class="mono" style="text-align:right">${fmt(totalBasic)}</td><td class="mono" style="text-align:right">${fmt(totalHousing)}</td><td class="mono" style="text-align:right">${fmt(totalTransport)}</td><td class="mono" style="text-align:right">${fmt(totalBasic+totalHousing+totalTransport)}</td></tr>
+      </tbody></table></div>
+    </div>
+    ${payrollRuns.length?`<div class="report-block"><div class="report-block-hd">Payroll run history</div>
+      <div class="report-block-body"><table><thead><tr><th>Period</th><th>Payment date</th><th>Employees</th><th style="text-align:right">Total (SAR)</th></tr></thead>
+      <tbody>${payrollRuns.map(pr=>`<tr><td style="font-weight:500">${pr.period||'—'}</td><td class="mono">${pr.payment_date||'—'}</td><td class="mono">${pr.employee_count||'—'}</td><td class="mono" style="text-align:right">${fmt(pr.total_amount)}</td></tr>`).join('')}</tbody></table></div>
+    </div>`:''}
+  </div>`;
+}
+
+// ── CUSTOM REPORT ─────────────────────────────────────────────
+let customModules=new Set(['ops']);
+let customFields={ops:['po','client','status','value'],fin:[],hr:[]};
+function renderCustom(c){
+  c.innerHTML=`<div class="section">
+    <div class="section-hd"><div class="section-title">Build custom report</div></div>
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:16px">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:12px">Data sources</div>
+          ${[{id:'ops',label:'Operations (FlowTrack)'},{id:'fin',label:'Finance (FlowLedger)'},{id:'hr',label:'HR (FlowPeople)'}].map(m=>`
+            <label style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)">
+              <input type="checkbox" ${customModules.has(m.id)?'checked':''} onchange="toggleModule('${m.id}',this.checked)" style="cursor:pointer">
+              ${m.label}
+            </label>`).join('')}
+        </div>
+        <div class="card">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:12px">Filters</div>
+          <div class="frow" style="margin-bottom:10px"><label>Date from</label><input type="date" id="cf-from"></div>
+          <div class="frow" style="margin-bottom:10px"><label>Date to</label><input type="date" id="cf-to"></div>
+          <div class="frow"><label>Status</label><select id="cf-status"><option value="">All statuses</option><option>PO Received</option><option>Quotation Sent</option><option>Pending Invoice</option><option>Invoiced</option><option>Overdue</option><option>Paid in Full</option></select></div>
+          <button class="btn btn-dark" style="width:100%;justify-content:center;margin-top:14px" onclick="buildCustomReport()">Generate report</button>
+        </div>
+      </div>
+      <div id="customResult"><div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--t3);font-size:13px">Configure your report and click Generate</div></div>
+    </div>
+  </div>`;
+}
+function toggleModule(id,checked){checked?customModules.add(id):customModules.delete(id);}
+function buildCustomReport(){
+  const from=document.getElementById('cf-from').value;
+  const to=document.getElementById('cf-to').value;
+  const statusF=document.getElementById('cf-status').value;
+  const result=document.getElementById('customResult');
+  let html='';
+  if(customModules.has('ops')){
+    let data=jobs;
+    if(statusF)data=data.filter(j=>j.status===statusF);
+    if(from)data=data.filter(j=>j.po_date>=from);
+    if(to)data=data.filter(j=>j.po_date<=to);
+    html+=`<div class="report-block"><div class="report-block-hd">Operations — ${data.length} jobs</div>
+      <div class="report-block-body"><table><thead><tr><th>PO #</th><th>Client</th><th>Status</th><th>PO Date</th><th style="text-align:right">Value</th></tr></thead>
+      <tbody>${data.map(j=>`<tr><td class="mono">${j.po||'—'}</td><td>${j.client||'—'}</td><td>${badge(j.status)}</td><td class="mono">${j.po_date||'—'}</td><td class="mono" style="text-align:right">${fmt(j.value)}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+  if(customModules.has('fin')){
+    let invData=invoices;
+    if(from)invData=invData.filter(i=>i.issue_date>=from);
+    if(to)invData=invData.filter(i=>i.issue_date<=to);
+    html+=`<div class="report-block"><div class="report-block-hd">Finance — ${invData.length} invoices</div>
+      <div class="report-block-body"><table><thead><tr><th>Invoice #</th><th>Client</th><th>Status</th><th>Issue date</th><th style="text-align:right">Amount</th></tr></thead>
+      <tbody>${invData.map(i=>`<tr><td class="mono">${i.invoice_num||'—'}</td><td>${i.client||'—'}</td><td><span class="badge b-blue">${i.status||'—'}</span></td><td class="mono">${i.issue_date||'—'}</td><td class="mono" style="text-align:right">${fmt(i.amount,2)}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+  if(customModules.has('hr')){
+    let empData=employees;
+    html+=`<div class="report-block"><div class="report-block-hd">HR — ${empData.length} employees</div>
+      <div class="report-block-body"><table><thead><tr><th>Name</th><th>Department</th><th>Title</th><th>Status</th><th>Start date</th></tr></thead>
+      <tbody>${empData.map(e=>`<tr><td style="font-weight:500">${e.first_name} ${e.last_name}</td><td>${e.department||'—'}</td><td style="color:var(--t2)">${e.job_title||'—'}</td><td><span class="badge ${'Active'===e.status?'b-green':'b-red'}">${e.status}</span></td><td class="mono">${e.start_date||'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+  result.innerHTML=html||'<div style="padding:24px;text-align:center;color:var(--t3)">Select at least one data source</div>';
+}
+
+// ── EXPORT ────────────────────────────────────────────────────
+function openExportModal(){document.getElementById('exportMo').classList.add('open');updatePreview();}
+function setFmt(f,btn){exportFmt=f;document.querySelectorAll('.fmt-pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function addRecipient(){const v=document.getElementById('recipientInput').value.trim().toLowerCase();if(!v||!v.includes('@')){toast('Enter valid email','err');return;}if(recipients.includes(v)){toast('Already added','err');return;}recipients.push(v);document.getElementById('recipientInput').value='';renderRecipientTags();}
+function removeRecipient(e){recipients=recipients.filter(r=>r!==e);renderRecipientTags();}
+function renderRecipientTags(){document.getElementById('recipientTags').innerHTML=recipients.map(r=>`<span class="rtag-pill">${r}<span class="rtag-remove" onclick="removeRecipient('${r}')">×</span></span>`).join('');}
+
+function updatePreview(){
+  const el=document.getElementById('exportPreview');if(!el)return;
+  const view=currentView;
+  let lines=[`FlowReports — ${VIEW_TITLES[view]||view}`,`Generated: ${new Date().toLocaleDateString('en-SA',{year:'numeric',month:'long',day:'numeric'})}`,`${'─'.repeat(50)}`,''];
+  if(view==='ops-summary'){jobs.filter(j=>j.status!=='Paid in Full').slice(0,5).forEach(j=>lines.push(`${j.po} | ${j.client} | ${j.status} | SAR ${fmt(j.value)}`));}
+  else if(view==='fin-ar'){invoices.slice(0,5).forEach(i=>lines.push(`${i.invoice_num} | ${i.client} | ${i.status} | SAR ${fmt(i.amount,2)}`));}
+  else if(view==='hr-headcount'){employees.slice(0,5).forEach(e=>lines.push(`${e.first_name} ${e.last_name} | ${e.department} | ${e.status}`));}
+  else lines.push('(Preview shows first 5 rows)');
+  if(el)el.textContent=lines.join('\n');
+}
+
+async function doExport(){
+  const btn=document.getElementById('exportBtn');
+  const status=document.getElementById('exportStatus');
+  btn.disabled=true;btn.textContent='Exporting…';
+  const title=VIEW_TITLES[currentView]||currentView;
+  const now=new Date().toLocaleDateString('en-SA',{year:'numeric',month:'long',day:'numeric'});
+  const safeName=title.replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  try{
+    // Build data rows
+    let headers=[],rows=[];
+    if(currentView==='ops-summary'||currentView==='ops-aging'){
+      headers=['PO#','Client','Description','Value','PO Date','Quote#','Status','Days open'];
+      rows=jobs.filter(j=>j.status!=='Paid in Full').map(j=>[j.po,j.client,j.description,j.value,j.po_date,j.quote_no,j.status,daysAgo(j.po_date)]);
+    }else if(currentView==='fin-ar'){
+      headers=['Invoice#','Client','Issue date','Due date','Amount','Paid','Balance','Status'];
+      rows=invoices.map(i=>[i.invoice_num,i.client,i.issue_date,i.due_date,i.amount,i.amount_paid,(i.amount||0)-(i.amount_paid||0),i.status]);
+    }else if(currentView==='fin-ap'){
+      headers=['Bill#','Vendor','Category','Bill date','Due date','Amount','Status'];
+      rows=bills.map(b=>[b.bill_num,b.vendor,b.category,b.bill_date,b.due_date,b.amount,b.status]);
+    }else if(currentView==='hr-headcount'||currentView==='hr-payroll'){
+      headers=['Name','Department','Title','Type','Basic','Housing','Transport','Total','Status','Start date'];
+      rows=employees.map(e=>[`${e.first_name} ${e.last_name}`,e.department,e.job_title,e.employment_type,e.basic_salary,e.housing_allowance,e.transport_allowance,(e.basic_salary||0)+(e.housing_allowance||0)+(e.transport_allowance||0),e.status,e.start_date]);
+    }else{
+      headers=['Module','Description','Value'];
+      rows=[['Operations','Open jobs',jobs.filter(j=>j.status!=='Paid in Full').length],['Finance','AR outstanding',invoices.filter(i=>i.status!=='Paid').reduce((s,i)=>s+(i.amount||0),0)],['HR','Active employees',employees.filter(e=>e.status==='Active').length]];
+    }
+
+    if(exportFmt==='csv'){
+      const csv=[headers.join(','),...rows.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+      triggerDownload('data:text/csv;charset=utf-8,'+encodeURIComponent(csv),safeName+'.csv');
+      toast('CSV downloaded ✓','ok');
+    }else if(exportFmt==='excel'){
+      const xmlRows=[headers,...rows].map(r=>'<Row>'+r.map(v=>'<Cell><Data ss:Type="'+(typeof v==='number'?'Number':'String')+'">'+(v||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</Data></Cell>').join('')+'</Row>').join('');
+      const xml='<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="'+title+'"><Table>'+xmlRows+'</Table></Worksheet></Workbook>';
+      triggerDownload('data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(xml),safeName+'.xls');
+      toast('Excel downloaded ✓','ok');
+    }else{
+      window.print();toast('Opening print dialog…','ok');
+    }
+
+    // Email if recipients added
+    if(recipients.length&&exportFmt!=='pdf'){
+      status.textContent='Sending emails…';
+      const csvBody=[headers.join(','),...rows.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+      for(const to of recipients){
+        await emailjs.send(EJS_SERVICE,EJS_TEMPLATE,{
+          to_email:to,to_name:to.split('@')[0],from_name:'FlowReports',
+          subject:`FlowReports: ${title} — ${now}`,
+          report_title:title,report_date:now,plain_body:csvBody,html_body:`<pre style="font-family:monospace;font-size:12px">${csvBody}</pre>`,
+          sender_email:currentUser.email,
+        },EJS_KEY);
+      }
+      toast(`Sent to ${recipients.length} recipient${recipients.length>1?'s':''}!`,'ok');
+    }
+    document.getElementById('exportMo').classList.remove('open');
+  }catch(e){toast('Export failed: '+e.message,'err');status.textContent='';}
+  finally{btn.disabled=false;btn.textContent='Download / Send';}
+}
+function triggerDownload(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click();}
+
+// ── DARK MODE ─────────────────────────────────────────────────
+function toggleDark(){const d=document.body.classList.toggle('dark');localStorage.setItem('flowtrack-dark',d?'1':'0');updateDarkUI(d);}
+function updateDarkUI(d){const t=document.getElementById('darkTrack'),l=document.getElementById('darkLabel');if(t)t.classList.toggle('on',d);if(l)l.textContent=d?'Light mode':'Dark mode';}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
+  document.getElementById('exportMo').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+});
+initSession();
+</script>
+</body>
+</html>
