@@ -29,7 +29,7 @@ body.dark{
 body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
 
 /* ── LOGIN ───────────────────────────────────────────────── */
-#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)}
+#loginScreen{display:none;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)}
 .login-card{background:var(--surface);border-radius:20px;padding:40px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.3)}
 .login-logo{font-size:22px;font-weight:600;letter-spacing:-.5px;margin-bottom:2px}
 .login-product{font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:28px}
@@ -236,7 +236,7 @@ body.dark .tog-track.on{background:var(--text)}
 <body>
 
 <!-- LOGIN -->
-<div id="loginScreen">
+<div id="loginScreen" style="display:none">
   <div class="login-card">
     <div class="login-logo">FlowLedger</div>
     <div class="login-product">Accounting · anlsco</div>
@@ -653,6 +653,22 @@ function daysAgo(d) { return d ? Math.floor((new Date()-new Date(d))/86400000) :
 // ═══════════════════════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════════════════════
+async function initApp(user) {
+  const { data: profile } = await db.from('profiles').select('role,full_name').eq('id',user.id).single();
+  if (profile?.role === 'operations') {
+    await db.auth.signOut();
+    document.getElementById('loginScreen').style.display='flex';
+    showErr('Accounting access requires Finance or Admin role.');
+    return;
+  }
+  currentUser = user;
+  document.getElementById('sf-name').textContent = profile?.full_name || user.email;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  if(localStorage.getItem('flowtrack-dark')==='1'){document.body.classList.add('dark');updateDarkUI(true);}
+  await loadAll();
+}
+
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
   const pass  = document.getElementById('loginPass').value;
@@ -663,14 +679,7 @@ async function doLogin() {
   try {
     const { data, error } = await db.auth.signInWithPassword({ email, password:pass });
     if (error) throw error;
-    // Check role
-    const { data: profile } = await db.from('profiles').select('role,full_name').eq('id',data.user.id).single();
-    if (profile?.role === 'operations') throw new Error('Accounting access requires Finance or Admin role.');
-    currentUser = data.user;
-    document.getElementById('sf-name').textContent = profile?.full_name || email;
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('appShell').style.display='block';
-    await loadAll();
+    await initApp(data.user);
   } catch(e) {
     showErr(e.message);
     btn.disabled=false; btn.textContent='Sign in';

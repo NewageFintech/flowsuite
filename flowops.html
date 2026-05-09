@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowOps — Operations</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root{--bg:#F4F2ED;--surface:#FFF;--s2:#F8F7F3;--border:#E2DDD5;--border2:#CCC8BE;--text:#1A1916;--t2:#6B6760;--t3:#9C9890;--ink:#1A1916;--ink-fg:#F4F2ED;--green:#1C6B4A;--gbg:#E8F5EE;--amber:#8A5A0A;--abg:#FDF3DC;--red:#8B2020;--rbg:#FDEAEA;--blue:#1A3B6E;--bbg:#E8EFF9;--purple:#4A2080;--pbg:#F0EAFA;--sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;--r:10px;--rl:16px}
+body.dark{--bg:#111110;--surface:#1C1B19;--s2:#242320;--border:#2E2D2A;--border2:#3D3C38;--text:#F0EEE9;--t2:#A09D97;--t3:#6B6860;--ink:#F0EEE9;--ink-fg:#111110;--green:#2D9E6B;--gbg:#0D2B1E;--amber:#C98A2A;--abg:#2A1E08;--red:#D94F4F;--rbg:#2A0F0F;--blue:#4A7FD4;--bbg:#0D1E38;--purple:#8A5FD4;--pbg:#1A0D38}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+#loginScreen{display:none;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)}
+.lc{background:var(--surface);border-radius:20px;padding:40px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.3)}
+.lc-logo{font-size:22px;font-weight:600;letter-spacing:-.5px;margin-bottom:2px}
+.lc-sub{font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:28px}
+.li{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--surface);outline:none;margin-bottom:12px;display:block;transition:border-color .15s}
+.li:focus{border-color:var(--border2)}
+.li-label{font-size:12px;font-weight:500;color:var(--t2);margin-bottom:5px;display:block}
+.login-btn{width:100%;padding:11px;background:var(--ink);color:var(--ink-fg);border:none;border-radius:9px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;margin-top:4px}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{font-size:12px;color:var(--red);background:var(--rbg);border:1px solid #f0b0b0;border-radius:8px;padding:8px 12px;margin-top:10px;display:none}
+.back-link{display:block;text-align:center;margin-top:16px;font-size:12px;color:var(--t3);text-decoration:none}
+.back-link:hover{color:var(--blue)}
+#appShell{display:none}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.logo-area{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-mark{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.logo-tag{font-size:10px;font-family:var(--mono);color:var(--t3);margin-top:1px}
+.nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nsec{font-size:10px;font-weight:500;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;padding:8px 10px 4px}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--t2);transition:all .15s;margin-bottom:1px;user-select:none}
+.ni:hover{background:var(--s2);color:var(--text)}
+.ni.active{background:var(--ink);color:var(--ink-fg)}
+.ni svg{width:16px;height:16px;flex-shrink:0}
+.ni-badge{margin-left:auto;font-size:10px;font-family:var(--mono);background:var(--rbg);color:var(--red);padding:2px 6px;border-radius:20px;font-weight:500}
+.ni.active .ni-badge{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-foot{padding:12px 14px;border-top:1px solid var(--border);font-size:12px;display:flex;flex-direction:column;gap:3px}
+.foot-name{font-weight:500;font-size:13px}
+.foot-role{font-size:11px;font-family:var(--mono);padding:2px 7px;border-radius:20px;display:inline-flex;width:fit-content;margin-top:2px}
+.role-admin{background:var(--ink);color:var(--ink-fg)}
+.role-finance{background:var(--bbg);color:var(--blue)}
+.role-operations{background:var(--gbg);color:var(--green)}
+.foot-link{font-size:11px;color:var(--blue);text-decoration:none;display:block;margin-top:2px}
+.foot-link:hover{text-decoration:underline}
+.logout-btn{background:none;border:none;font-family:var(--sans);font-size:11px;color:var(--t3);cursor:pointer;text-align:left;padding:0;margin-top:2px}
+.logout-btn:hover{color:var(--red)}
+.sync-row{display:flex;align-items:center;gap:5px;margin-top:2px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.sync-dot.warn{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+.topbar-title{font-size:16px;font-weight:500;flex:1}
+.role-banner{padding:9px 24px;font-size:12px;display:flex;align-items:center;gap:8px;flex-shrink:0;border-bottom:1px solid}
+.role-banner.ops{background:var(--gbg);color:var(--green);border-color:#b8dfc8}
+.role-banner.fin{background:var(--bbg);color:var(--blue);border-color:#b0c8f0}
+.role-banner.adm{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:7px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;color:var(--text);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--s2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-dark{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.btn-dark:hover{background:#2d2c28}
+.btn-sm{font-size:12px;padding:5px 10px;border-radius:6px}
+.btn-ghost{border-color:transparent;background:transparent}
+.btn-ghost:hover{background:var(--s2);border-color:var(--border)}
+.btn-danger{background:var(--rbg);color:var(--red);border-color:#f0b0b0}
+.btn-green{background:var(--gbg);color:var(--green);border-color:#b8dfc8}
+.vtabs{display:flex;gap:4px}
+.vtab{font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--t2);font-family:var(--sans);transition:all .15s}
+.vtab:hover{background:var(--s2)}
+.vtab.active{background:var(--surface);border-color:var(--border);color:var(--text)}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:20px 24px 0}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px}
+.mc-label{font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.mc-val{font-size:26px;font-weight:300;letter-spacing:-1px;font-family:var(--mono)}
+.mc-val.warn{color:var(--amber)}.mc-val.danger{color:var(--red)}.mc-val.ok{color:var(--green)}
+.mc-sub{font-size:11px;color:var(--t3);margin-top:4px}
+
+/* PIPELINE */
+.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:16px 24px 24px;align-items:start}
+.pcol{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.pcol-hd{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.pcol-title{font-size:12px;font-weight:500;flex:1}
+.pcol-count{font-family:var(--mono);font-size:11px;background:var(--s2);border:1px solid var(--border);padding:2px 7px;border-radius:20px;color:var(--t2)}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pbody{padding:8px;display:flex;flex-direction:column;gap:7px;max-height:calc(100vh - 310px);overflow-y:auto}
+.pcard{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .15s}
+.pcard:hover{border-color:var(--border2);background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.pcard-top{font-family:var(--mono);font-size:11px;color:var(--t3);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:4px}
+.pcard-client{font-size:12px;font-weight:500;margin-bottom:3px}
+.pcard-desc{font-size:11px;color:var(--t2);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard-foot{display:flex;align-items:center;justify-content:space-between}
+.pcard-val{font-family:var(--mono);font-size:11px;font-weight:500}
+.pcard-age{font-size:10px;color:var(--t3)}
+.pcard-age.old{color:var(--amber)}.pcard-age.stale{color:var(--red)}
+.tag-new{font-size:9px;font-weight:600;text-transform:uppercase;background:var(--abg);color:var(--amber);padding:2px 5px;border-radius:4px}
+.tag-warn{width:6px;height:6px;background:var(--red);border-radius:50%}
+
+/* TABLE */
+.table-section{padding:0 24px 24px}
+.toolbar{display:flex;align-items:center;gap:10px;padding:14px 0 12px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px;max-width:280px}
+.search-wrap input{width:100%;padding:7px 12px 7px 30px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-family:var(--sans);font-size:13px;color:var(--text);outline:none}
+.search-wrap input:focus{border-color:var(--border2)}
+.si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--t3);pointer-events:none}
+.ftabs{display:flex;gap:4px;flex-wrap:wrap}
+.ftab{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--t2);font-family:var(--sans);transition:all .15s}
+.ftab.active{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.twrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--s2)}
+th{text-align:left;padding:10px 14px;font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--s2)}
+.mono{font-family:var(--mono);font-size:12px}
+.sel-toolbar{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--r);margin-bottom:10px;font-size:13px;color:var(--blue)}
+.sel-toolbar.visible{display:flex}
+.cb-cell{width:36px;padding:11px 8px 11px 14px!important}
+th.cb-cell{padding:10px 8px 10px 14px!important}
+.cb{width:15px;height:15px;cursor:pointer;accent-color:var(--ink)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.bdot{width:5px;height:5px;border-radius:50%;opacity:.6}
+.b-po{background:var(--s2);color:var(--t2);border:1px solid var(--border)}
+.b-quoted{background:var(--bbg);color:var(--blue)}
+.b-approved{background:var(--pbg);color:var(--purple)}
+.b-pending{background:var(--abg);color:var(--amber)}
+.b-invoiced{background:var(--gbg);color:var(--green)}
+.b-overdue{background:var(--rbg);color:var(--red)}
+.b-partial{background:#FEF3E2;color:#8A4F0A}
+
+/* MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(26,25,22,.55);z-index:200;align-items:center;justify-content:center;padding:20px}
+.mo.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);width:100%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.18)}
+.modal.wide{max-width:800px}
+.mhd{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.mhd h3{font-size:15px;font-weight:500}
+.mclose{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:18px;line-height:1}
+.mclose:hover{background:var(--s2)}
+.mbody{padding:20px 24px}
+.fsec{margin-bottom:20px}
+.fsec-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.frow{display:flex;flex-direction:column;gap:5px}
+.frow label{font-size:12px;font-weight:500;color:var(--t2)}
+.req{color:var(--red)}
+.frow input,.frow select,.frow textarea{font-family:var(--sans);font-size:13px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:var(--border2)}
+.frow input:disabled,.frow select:disabled,.frow textarea:disabled{background:var(--s2);color:var(--t3);cursor:not-allowed}
+.frow textarea{resize:vertical;min-height:70px}
+.mfoot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:var(--surface)}
+.field-lock-note{font-size:11px;color:var(--t3);font-style:italic}
+
+/* FILE UPLOAD */
+.upload-zone{border:1.5px dashed var(--border2);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .15s;background:var(--s2);display:flex;align-items:center;gap:10px;position:relative}
+.upload-zone:hover{border-color:var(--ink);background:var(--surface)}
+.upload-zone.has-file{border-color:var(--green);background:var(--gbg);border-style:solid}
+.upload-zone.required-missing{border-color:var(--red);background:var(--rbg)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:3}
+.upload-zone .upload-remove{z-index:4}
+.upload-icon{width:32px;height:32px;border-radius:6px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--t2)}
+.upload-zone.has-file .upload-icon{background:var(--gbg);border-color:var(--green);color:var(--green)}
+.upload-text{flex:1;min-width:0}
+.upload-title{font-size:12px;font-weight:500;color:var(--text)}
+.upload-sub{font-size:11px;color:var(--t3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upload-zone.has-file .upload-title{color:var(--green)}
+.upload-remove{font-size:18px;color:var(--t3);cursor:pointer;padding:2px 6px;position:relative;line-height:1}
+.upload-remove:hover{color:var(--red)}
+.file-link{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);color:var(--blue);text-decoration:none;background:var(--bbg);padding:3px 8px;border-radius:6px}
+
+/* DETAIL PANEL */
+.do{display:none;position:fixed;inset:0;background:rgba(26,25,22,.35);z-index:150}
+.do.open{display:block}
+.dp{position:fixed;top:0;right:0;bottom:0;width:440px;background:var(--surface);border-left:1px solid var(--border);z-index:151;overflow-y:auto;transform:translateX(110%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.dp.open{transform:translateX(0)}
+.dp-hd{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.dp-po{font-family:var(--mono);font-size:12px;color:var(--t3);margin-bottom:4px}
+.dp-client{font-size:18px;font-weight:500}
+.dp-body{padding:0 20px 24px}
+.dsec{margin-top:18px}
+.dsec-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:10px}
+.drow{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.drow:last-child{border-bottom:none}
+.dk{color:var(--t2);flex-shrink:0}
+.dv{font-weight:500;text-align:right;word-break:break-word}
+.dv.mono{font-family:var(--mono);font-size:12px}
+.d-actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+
+/* TIMELINE */
+.tl{margin-top:8px}
+.tl-item{display:flex;gap:12px;padding:8px 0;position:relative}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:7px;top:22px;bottom:-8px;width:1px;background:var(--border)}
+.tl-dot{width:15px;height:15px;border-radius:50%;border:2px solid var(--border2);background:var(--surface);flex-shrink:0;margin-top:2px}
+.tl-dot.done{background:var(--green);border-color:var(--green)}
+.tl-dot.cur{background:var(--ink);border-color:var(--ink)}
+.tl-label{font-size:13px;font-weight:500}
+.tl-date{font-size:11px;color:var(--t3);font-family:var(--mono)}
+
+/* ADVANCE MODAL */
+.adv-stage-badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:6px 14px;border-radius:20px;background:var(--s2);border:1px solid var(--border);margin-bottom:16px}
+.je-line{display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:8px;margin-bottom:8px;align-items:center}
+.je-line input,.je-line select{font-family:var(--sans);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:100%}
+.je-remove{background:none;border:none;cursor:pointer;color:var(--t3);font-size:18px;line-height:1;padding:0 4px}
+.je-remove:hover{color:var(--red)}
+
+/* SUMMARY VIEW */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px 24px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:18px 20px}
+.sc h4{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--t2)}
+.brow{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.blabel{width:90px;color:var(--t2);flex-shrink:0;font-size:11px}
+.bwrap{flex:1;height:6px;background:var(--s2);border-radius:3px;overflow:hidden}
+.bfill{height:100%;border-radius:3px;transition:width .6s ease}
+.bcnt{width:40px;text-align:right;font-family:var(--mono);color:var(--t3);font-size:11px}
+.crow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.crow:last-child{border-bottom:none}
+
+/* NOTIF */
+.notif{background:var(--abg);border-bottom:1px solid #E8C86A;padding:10px 24px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--amber);flex-shrink:0}
+.notif-items{flex:1;display:flex;gap:12px;flex-wrap:wrap}
+
+/* USERS */
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;display:flex;align-items:center;gap:14px}
+.user-avatar{width:40px;height:40px;border-radius:50%;background:var(--ink);color:var(--ink-fg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0}
+.user-role-badge{font-size:11px;font-family:var(--mono);padding:2px 7px;border-radius:20px;display:inline-flex;margin-top:3px}
+
+/* EMAIL MODAL */
+.fmt-pills{display:flex;gap:6px;flex-wrap:wrap}
+.fmt-pill{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--t2);font-family:var(--sans);transition:all .15s}
+.fmt-pill.active{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.recipient-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rtag{background:var(--bbg);color:var(--blue);font-size:11px;padding:3px 10px;border-radius:20px;display:flex;align-items:center;gap:5px;font-family:var(--mono)}
+.rtag-remove{cursor:pointer;opacity:.6;font-size:14px;line-height:1}
+.rtag-remove:hover{opacity:1}
+.email-preview{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:12px;font-family:var(--mono);color:var(--t2);max-height:200px;overflow-y:auto;white-space:pre-wrap;line-height:1.6;margin-top:8px}
+
+/* DARK TOGGLE */
+.dark-toggle{display:flex;align-items:center;gap:7px;background:none;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--t2);padding:0;margin-top:4px}
+.tog-track{width:28px;height:16px;border-radius:20px;background:var(--border2);position:relative;transition:background .2s;flex-shrink:0}
+.tog-track.on{background:var(--ink)}
+body.dark .tog-track.on{background:var(--text)}
+.tog-thumb{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tog-track.on .tog-thumb{transform:translateX(12px)}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--t2);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;gap:10px;color:var(--t3);font-size:13px}
+.empty{text-align:center;padding:40px;color:var(--t3);font-size:13px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--ink-fg);font-size:13px;padding:10px 18px;border-radius:10px;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;font-family:var(--sans)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{background:var(--red)}.toast.ok{background:var(--green)}
+/* Responsive */
+body.brole-admin .admin-only,.body.brole-finance .finance-only{display:flex!important}
+body.brole-admin .vtab.admin-only,body.brole-finance .vtab.finance-only{display:inline-flex!important}
+body.brole-admin .btn.admin-only,body.brole-finance .btn.finance-only{display:inline-flex!important}
+.admin-only,.finance-only{display:none}
+@media(max-width:900px){.sidebar{width:48px}.logo-area,.nsec,.ni span,.sidebar-foot .sf-t,.logo-tag{display:none}.ni{justify-content:center}.metrics{grid-template-columns:repeat(2,1fr)}.pipeline{grid-template-columns:repeat(2,1fr)}.dp{width:100%}.sum-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="lc">
+    <div class="lc-logo">FlowOps</div>
+    <div class="lc-sub">Operations module · anlsco</div>
+    <label class="li-label">Email</label>
+    <input class="li" id="loginEmail" type="email" placeholder="you@anls.com" autocomplete="email">
+    <label class="li-label">Password</label>
+    <input class="li" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="loginErr"></div>
+    <a class="back-link" href="index.html">← Back to FlowSuite</a>
+  </div>
+</div>
+
+<div id="appShell">
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-mark">FlowOps</div>
+      <div class="logo-tag">Operations module</div>
+    </div>
+    <nav class="nav">
+      <div class="nsec">Overview</div>
+      <div class="ni active" id="nav-pipeline" onclick="showView('pipeline')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="4" height="12" rx="1.5" fill="currentColor" opacity=".4"/><rect x="6" y="4" width="4" height="10" rx="1.5" fill="currentColor" opacity=".7"/><rect x="11" y="6" width="4" height="8" rx="1.5" fill="currentColor"/></svg>
+        <span>Pipeline</span>
+        <span class="ni-badge" id="nb-alert" style="display:none">0</span>
+      </div>
+      <div class="nsec">Jobs</div>
+      <div class="ni" id="nav-table" onclick="showView('table')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 5h14M5 5v10" stroke="currentColor" stroke-width="1.2"/></svg>
+        <span>All jobs</span>
+      </div>
+      <div class="ni finance-only" id="nav-summary" onclick="showView('summary')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12L5 8l3 2 3-5 3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Summary</span>
+      </div>
+      <div class="nsec">Contacts</div>
+      <div class="ni" id="nav-clients" onclick="showView('clients')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 13c0-3.31 2.69-6 6-6s6 2.69 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Clients</span>
+      </div>
+      <div class="ni" id="nav-vendors" onclick="showView('vendors')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 4V3a3 3 0 0 1 6 0v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Vendors</span>
+      </div>
+      <div class="nsec">Actions</div>
+      <div class="ni" onclick="openAddModal()">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Add PO</span>
+      </div>
+      <div class="ni finance-only" onclick="openEmailModal()">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 5l7 5 7-5" stroke="currentColor" stroke-width="1.2"/></svg>
+        <span>Email report</span>
+      </div>
+      <div class="ni admin-only" id="nav-users" onclick="showView('users')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M1 13c0-2.76 2.24-5 5-5M11 10v4M13 12h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Manage users</span>
+      </div>
+      <div class="ni" onclick="exportCSV()">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Export CSV</span>
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="sf-t">
+        <div class="foot-name" id="sf-name">—</div>
+        <div class="foot-role" id="sf-role">—</div>
+        <div class="sync-row"><span class="sync-dot warn" id="syncDot"></span><span style="font-size:11px;color:var(--t3)" id="syncLabel">Connecting…</span></div>
+        <a class="foot-link" href="index.html">⌂ FlowSuite home</a>
+        <button class="dark-toggle" onclick="toggleDark()"><span class="tog-track" id="darkTrack"><span class="tog-thumb"></span></span><span id="darkLabel">Dark mode</span></button>
+        <button class="logout-btn" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="role-banner" id="roleBanner" style="display:none"></div>
+    <div class="notif" id="notifBar" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v4M8 11v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <div class="notif-items" id="notifItems"></div>
+      <button class="btn btn-sm" style="border-color:var(--amber);color:var(--amber)" onclick="document.getElementById('notifBar').style.display='none'">Dismiss</button>
+    </div>
+    <div class="topbar">
+      <div class="topbar-title" id="viewTitle">Pipeline</div>
+      <div class="vtabs">
+        <button class="vtab active" id="tab-pipeline" onclick="showView('pipeline')">Pipeline</button>
+        <button class="vtab" id="tab-table" onclick="showView('table')">All jobs</button>
+        <button class="vtab finance-only" id="tab-summary" onclick="showView('summary')">Summary</button>
+        <button class="vtab admin-only" id="tab-users" onclick="showView('users')">Users</button>
+      </div>
+      <button class="btn finance-only btn-email" style="background:var(--bbg);color:var(--blue);border-color:#b0c8f0" onclick="openEmailModal()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 5l7 5 7-5" stroke="currentColor" stroke-width="1.2"/></svg>
+        Email report
+      </button>
+      <button class="btn" onclick="loadJobs()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 118 2.5c2 0 3.7 1 4.7 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+      <button class="btn btn-dark" onclick="openAddModal()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add PO
+      </button>
+    </div>
+
+    <div class="metrics" id="metricsGrid">
+      <div class="mc"><div class="mc-label">Open jobs</div><div class="mc-val" id="m-total">—</div><div class="mc-sub">Active records</div></div>
+      <div class="mc"><div class="mc-label">Missing quote</div><div class="mc-val danger" id="m-noquote">—</div><div class="mc-sub">No quotation linked</div></div>
+      <div class="mc" id="mc-pending"><div class="mc-label">Pending invoice</div><div class="mc-val warn" id="m-pending">—</div><div class="mc-sub">Ready to invoice</div></div>
+      <div class="mc" id="mc-sent" style="display:none"><div class="mc-label">Sent for invoicing</div><div class="mc-val warn" id="m-sent">—</div><div class="mc-sub">Awaiting finance</div></div>
+      <div class="mc finance-only" id="mc-overdue"><div class="mc-label">Overdue</div><div class="mc-val danger" id="m-overdue">—</div><div class="mc-sub">Unpaid past due</div></div>
+      <div class="mc finance-only" id="mc-invval"><div class="mc-label">Invoiced value</div><div class="mc-val ok" id="m-inv">—</div><div class="mc-sub" id="m-inv-sar">SAR 0</div></div>
+    </div>
+
+    <div id="view-pipeline" class="pipeline"><div class="loading" style="grid-column:1/-1"><div class="spinner"></div>Loading…</div></div>
+    <div id="view-table" class="table-section" style="display:none">
+      <div id="selToolbar" class="sel-toolbar">
+        <span style="flex:1;font-weight:600"><span id="selCount">0</span> selected</span>
+        <button class="btn btn-sm" onclick="selectAll()">Select all</button>
+        <button class="btn btn-sm" onclick="clearSel()">Clear</button>
+        <button class="btn btn-sm btn-dark" onclick="openExportModal('sel')">Export selected</button>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg class="si" width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10 10l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" id="searchInput" placeholder="Search PO, client, quote…" oninput="renderTable()">
+        </div>
+        <div class="ftabs">
+          <button class="ftab active" onclick="setFilter('all',this)">All</button>
+          <button class="ftab" onclick="setFilter('PO Received',this)">PO received</button>
+          <button class="ftab" onclick="setFilter('Quotation Sent',this)">Quote sent</button>
+          <button class="ftab" onclick="setFilter('Quote Approved',this)">Approved</button>
+          <button class="ftab finance-only" onclick="setFilter('Pending Invoice',this)">Pending invoice</button>
+          <button class="ftab ops-sent" onclick="setFilter('Pending Invoice',this)">Sent for invoicing</button>
+          <button class="ftab finance-only" onclick="setFilter('Invoiced',this)">Invoiced</button>
+          <button class="ftab finance-only" onclick="setFilter('Overdue',this)">Overdue</button>
+          <button class="ftab finance-only" onclick="setFilter('Paid in Full',this)">Paid</button>
+        </div>
+        <button class="btn btn-sm" onclick="openExportModal('table')" style="margin-left:auto">Export</button>
+      </div>
+      <div class="twrap">
+        <table>
+          <thead><tr>
+            <th class="cb-cell"><input class="cb" type="checkbox" id="selAllCb" onchange="toggleSelAll(this.checked)"></th>
+            <th>PO #</th><th>Client</th><th>Description</th><th class="finance-only">Value (SAR)</th>
+            <th>PO date</th><th>Quote #</th><th class="finance-only" id="th-inv">Invoice #</th>
+            <th>Status</th><th>Days open</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div id="tEmpty" class="empty" style="display:none">No records match this filter.</div>
+      </div>
+    </div>
+    <div id="view-summary" style="display:none"><div class="sum-grid" id="sumGrid"></div></div>
+    <div id="view-clients" style="display:none"><div id="clientsContent" style="padding:16px 24px 24px"></div></div>
+    <div id="view-vendors" style="display:none"><div id="vendorsContent" style="padding:16px 24px 24px"></div></div>
+    <div id="view-users" style="display:none">
+      <div style="padding:16px 24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div><div style="font-size:15px;font-weight:500">Team members</div><div style="font-size:12px;color:var(--t3);margin-top:2px">Manage access and roles</div></div>
+          <button class="btn btn-dark" onclick="openInviteModal()">+ Invite user</button>
+        </div>
+        <div id="usersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ADD/EDIT JOB MODAL -->
+<div class="mo" id="mo">
+  <div class="modal wide">
+    <div class="mhd"><h3 id="mTitle">Add new PO</h3><button class="mclose" onclick="closeModal()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="f-id">
+      <div class="fsec">
+        <div class="fsec-title">PO details</div>
+        <div class="fg">
+          <div class="frow"><label>PO number <span class="req">*</span></label><input id="f-po" placeholder="PO-2026-001"></div>
+          <div class="frow"><label>Client <span class="req">*</span></label>
+            <div style="display:flex;gap:6px">
+              <select id="f-client-id" style="flex:1" onchange="setClientFromSelect()"><option value="">Select client…</option></select>
+              <input id="f-client" placeholder="Or type name" style="flex:1">
+              <button class="btn btn-sm" onclick="openNewContact('client')" type="button" title="Add client">+</button>
+            </div>
+          </div>
+          <div class="frow"><label>PO date</label><input id="f-podate" type="date"></div>
+          <div class="frow"><label>PO value (SAR)</label><input id="f-value" type="number" placeholder="0" min="0"></div>
+          <div class="frow"><label>Priority</label>
+            <select id="f-priority"><option value="">Normal</option><option value="High">High</option><option value="Urgent">Urgent</option><option value="Low">Low</option></select>
+          </div>
+          <div class="frow"><label>Assigned to</label><input id="f-assigned" placeholder="Team member name"></div>
+        </div>
+        <div class="frow" style="margin-top:12px"><label>Scope / description</label><textarea id="f-desc" placeholder="Brief description of services or goods"></textarea></div>
+        <div class="frow" style="margin-top:12px" id="po-file-row">
+          <label>PO document <span class="req">*</span> <span style="font-size:11px;color:var(--t3);font-weight:400">(required)</span></label>
+          <div class="upload-zone" id="po-upload-zone">
+            <input type="file" id="f-po-file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" onchange="handleFileSelect('po',this)">
+            <div class="upload-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+            <div class="upload-text"><div class="upload-title" id="po-upload-title">Click to upload PO document</div><div class="upload-sub">PDF, Word, Excel, image — max 10MB</div></div>
+            <span class="upload-remove" id="po-upload-remove" style="display:none" onclick="removeFile(event,'po')">×</span>
+          </div>
+          <div id="po-existing-file" style="display:none;margin-top:6px"></div>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Quotation</div>
+        <div class="fg">
+          <div class="frow"><label>Quotation #</label><input id="f-quote" placeholder="QT-2026-001"></div>
+          <div class="frow"><label>Quote date</label><input id="f-qdate" type="date"></div>
+          <div class="frow"><label>Quote value (SAR)</label><input id="f-qvalue" type="number" placeholder="0" min="0"></div>
+          <div class="frow"><label>Client approval date</label><input id="f-approvedate" type="date"></div>
+        </div>
+        <div class="frow" style="margin-top:12px" id="quote-file-row">
+          <label>Quotation document <span class="req">*</span> <span style="font-size:11px;color:var(--t3);font-weight:400">(required when quote # entered)</span></label>
+          <div class="upload-zone" id="quote-upload-zone">
+            <input type="file" id="f-quote-file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" onchange="handleFileSelect('quote',this)">
+            <div class="upload-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+            <div class="upload-text"><div class="upload-title" id="quote-upload-title">Click to upload quotation document</div><div class="upload-sub">PDF, Word, Excel, image — max 10MB</div></div>
+            <span class="upload-remove" id="quote-upload-remove" style="display:none" onclick="removeFile(event,'quote')">×</span>
+          </div>
+          <div id="quote-existing-file" style="display:none;margin-top:6px"></div>
+        </div>
+      </div>
+      <div class="fsec" id="fsec-invoice">
+        <div class="fsec-title">Invoice &amp; payment <span id="invoice-lock-note" class="field-lock-note"></span></div>
+        <div class="fg">
+          <div class="frow"><label>Invoice #</label><input id="f-inv" placeholder="INV-2026-001"></div>
+          <div class="frow"><label>Invoice date</label><input id="f-invdate" type="date"></div>
+          <div class="frow"><label>Due date</label><input id="f-duedate" type="date"></div>
+          <div class="frow"><label>Payment received date</label><input id="f-paiddate" type="date"></div>
+          <div class="frow"><label>Amount paid (SAR)</label><input id="f-paidamt" type="number" placeholder="0" min="0"></div>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Status</div>
+        <div class="fg">
+          <div class="frow"><label>Status</label>
+            <select id="f-status">
+              <option>PO Received</option><option>Quotation Sent</option><option>Quote Approved</option>
+              <option>Pending Invoice</option><option>Invoiced</option><option>Partial Payment</option>
+              <option>Overdue</option><option>Paid in Full</option>
+            </select>
+          </div>
+          <div class="frow"><label>Tags</label><input id="f-tags" placeholder="e.g. maintenance, inspection"></div>
+        </div>
+        <div class="frow" style="margin-top:12px"><label>Notes / remarks</label><textarea id="f-notes"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger admin-only" id="deleteBtn" style="display:none" onclick="deleteEntry()">Delete record</button></div>
+      <div style="display:flex;gap:8px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-dark" id="saveBtn" onclick="saveEntry()">Save record</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADVANCE MODAL -->
+<div class="mo" id="advanceMo">
+  <div class="modal" style="max-width:520px">
+    <div class="mhd"><h3 id="adv-title">Advance stage</h3><button class="mclose" onclick="closeAdvModal()">×</button></div>
+    <div class="mbody">
+      <div id="adv-stage-badge" class="adv-stage-badge"></div>
+      <div id="adv-fields"></div>
+    </div>
+    <div class="mfoot">
+      <div style="font-size:12px;color:var(--t3)" id="adv-note"></div>
+      <div style="display:flex;gap:8px"><button class="btn" onclick="closeAdvModal()">Cancel</button><button class="btn btn-dark" id="adv-save-btn" onclick="saveAdvance()">Advance</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- EMAIL REPORT MODAL -->
+<div class="mo" id="emailMo">
+  <div class="modal" style="max-width:580px">
+    <div class="mhd"><h3 id="reportModalTitle">Reports &amp; Export</h3><button class="mclose" onclick="closeEmailModal()">×</button></div>
+    <div class="mbody">
+      <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:18px">
+        <button class="report-action-tab" id="rat-email" onclick="setReportAction('email')" style="flex:1;padding:8px;border:none;background:var(--ink);color:var(--ink-fg);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer">📧 Email</button>
+        <button class="report-action-tab" id="rat-download" onclick="setReportAction('download')" style="flex:1;padding:8px;border:none;background:transparent;color:var(--t2);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;border-left:1px solid var(--border)">⬇ Download</button>
+        <button class="report-action-tab" id="rat-preview" onclick="setReportAction('preview')" style="flex:1;padding:8px;border:none;background:transparent;color:var(--t2);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;border-left:1px solid var(--border)">👁 Preview</button>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Report type</div>
+        <div class="frow"><select id="email-type" onchange="updateEmailPreview()">
+          <option value="full">Full status report — all open jobs</option>
+          <option value="pending">Pending invoices only</option>
+          <option value="overdue">Overdue jobs only</option>
+          <option value="noquote">POs missing quotation</option>
+          <option value="summary">Executive summary</option>
+          <option value="selection" id="email-type-sel" style="display:none">Selected records</option>
+        </select></div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-title">Format</div>
+        <div class="fmt-pills">
+          <button class="fmt-pill active" id="fmt-html" onclick="setFmt('html',this)">📄 HTML</button>
+          <button class="fmt-pill" id="fmt-csv" onclick="setFmt('csv',this)">📊 CSV</button>
+          <button class="fmt-pill" id="fmt-excel" onclick="setFmt('excel',this)">📗 Excel</button>
+          <button class="fmt-pill" id="fmt-pdf" onclick="setFmt('pdf',this)">📑 PDF</button>
+        </div>
+      </div>
+      <div class="fsec" id="fsec-recipients">
+        <div class="fsec-title">Recipients</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="recipientInput" style="flex:1;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;outline:none;background:var(--surface);color:var(--text)" placeholder="name@anls.com" onkeydown="if(event.key==='Enter')addRecipient()">
+          <button class="btn btn-sm" onclick="addRecipient()">Add</button>
+        </div>
+        <div class="recipient-tags" id="recipientTags"></div>
+      </div>
+      <div class="fsec"><div class="fsec-title">Preview</div><div class="email-preview" id="emailPreview">—</div></div>
+    </div>
+    <div class="mfoot">
+      <div style="font-size:12px;color:var(--t3)" id="emailStatus"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeEmailModal()">Cancel</button>
+        <button class="btn btn-dark" id="sendEmailBtn" onclick="executeReport()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M14 2L1 7l5 2 2 5 6-12z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="reportActionLabel">Send report</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE USER MODAL -->
+<div class="mo" id="inviteMo">
+  <div class="modal" style="max-width:420px">
+    <div class="mhd"><h3>Invite team member</h3><button class="mclose" onclick="document.getElementById('inviteMo').classList.remove('open')">×</button></div>
+    <div class="mbody">
+      <div class="fg" style="grid-template-columns:1fr">
+        <div class="frow"><label>Full name <span class="req">*</span></label><input id="inv-name" placeholder="First Last"></div>
+        <div class="frow"><label>Email <span class="req">*</span></label><input id="inv-email" type="email" placeholder="name@anls.com"></div>
+        <div class="frow"><label>Temporary password <span class="req">*</span></label><input id="inv-pass" type="password" placeholder="Min 6 characters"></div>
+        <div class="frow"><label>Role</label>
+          <select id="inv-role">
+            <option value="operations">Operations — POs & quotations, no financials</option>
+            <option value="finance">Finance — invoicing, reports, summaries</option>
+            <option value="admin">Admin — full access including user management</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div style="font-size:12px;color:var(--t3)">User will need to confirm email before logging in</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="document.getElementById('inviteMo').classList.remove('open')">Cancel</button>
+        <button class="btn btn-dark" id="inviteBtn" onclick="inviteUser()">Create account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE USER MODAL -->
+<div class="mo" id="deleteUserMo">
+  <div class="modal" style="max-width:420px">
+    <div class="mhd"><h3>Delete user account</h3><button class="mclose" onclick="document.getElementById('deleteUserMo').classList.remove('open')">×</button></div>
+    <div class="mbody">
+      <div style="background:var(--rbg);border:1px solid #f0b0b0;border-radius:8px;padding:12px 14px;margin-bottom:18px">
+        <div style="font-size:13px;font-weight:500;color:var(--red)">Permanent action</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:3px">Deleting <strong id="du-name">this user</strong> removes their profile. Their records remain.</div>
+      </div>
+      <div class="frow"><label>Your password <span class="req">*</span></label><input id="du-password" type="password" placeholder="Enter your password to confirm"></div>
+    </div>
+    <div class="mfoot">
+      <div style="font-size:12px;color:var(--t3)" id="du-status"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="document.getElementById('deleteUserMo').classList.remove('open')">Cancel</button>
+        <button class="btn btn-danger" id="du-confirm-btn" onclick="confirmDeleteUser()">Delete account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT MODAL -->
+<div class="mo" id="contactMo">
+  <div class="modal" style="max-width:520px">
+    <div class="mhd"><h3 id="ct-title">Add contact</h3><button class="mclose" onclick="closeContact()">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="ct-id">
+      <div class="fg">
+        <div class="frow"><label>Name <span class="req">*</span></label><input id="ct-name" placeholder="Company or person name"></div>
+        <div class="frow"><label>Type</label><select id="ct-type"><option value="client">Client</option><option value="vendor">Vendor</option><option value="both">Both</option></select></div>
+        <div class="frow"><label>Email</label><input id="ct-email" type="email" placeholder="contact@company.com"></div>
+        <div class="frow"><label>Phone</label><input id="ct-phone" placeholder="+966 5X XXX XXXX"></div>
+        <div class="frow"><label>VAT number</label><input id="ct-vat" placeholder="VAT registration #"></div>
+        <div class="frow"><label>CR number</label><input id="ct-cr" placeholder="Commercial registration #"></div>
+        <div class="frow" style="grid-column:1/-1"><label>Address</label><textarea id="ct-address" style="min-height:50px" placeholder="Full address…"></textarea></div>
+        <div class="frow" style="grid-column:1/-1"><label>Notes</label><textarea id="ct-notes" style="min-height:40px" placeholder="Any notes…"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="ctDeleteBtn" style="display:none" onclick="deleteContact()">Delete</button></div>
+      <div style="display:flex;gap:8px"><button class="btn" onclick="closeContact()">Cancel</button><button class="btn btn-dark" id="ctSaveBtn" onclick="saveContact()">Save</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="do" id="do" onclick="closeDetail()"></div>
+<div class="dp" id="dp">
+  <div class="dp-hd">
+    <div><div class="dp-po" id="dp-po"></div><div class="dp-client" id="dp-client"></div></div>
+    <button class="mclose" onclick="closeDetail()">×</button>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL='https://pqcjhdrvqzcsvddimwaq.supabase.co';
+const SUPA_KEY='sb_publishable_Que35EYrhPKCFzQuz9Okog_QkU0fbmh';
+const EJS_SERVICE='service_yhm9xir',EJS_TEMPLATE='template_klzqzn8',EJS_KEY='bxA6rUISacTkkQIg7';
+const {createClient}=supabase;
+const db=createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,detectSessionInUrl:true,storageKey:'flowsuite-auth',storage:window.localStorage}});
+
+// ── SESSION ──────────────────────────────────────────────────
+async function initSession(){
+  const hash=window.location.hash.slice(1);
+  if(hash){const p=new URLSearchParams(hash);const at=p.get('access_token'),rt=p.get('refresh_token');if(at&&rt){history.replaceState(null,'',window.location.pathname);const{data,error}=await db.auth.setSession({access_token:at,refresh_token:rt});if(!error&&data?.user){await initApp(data.user);return;}}}
+  const{data:{session}}=await db.auth.getSession();
+  if(session?.user){await initApp(session.user);return;}
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+let currentUser=null,currentRole=null,jobs=[],contacts=[];
+let currentFilter='all',currentView='pipeline',selectedIds=new Set();
+let pendingFiles={po:null,quote:null},recipients=[],reportAction='email',reportFmt='html',exportSource='table';
+let advanceJobId=null,deleteTargetId=null,deleteTargetName=null;
+
+// ── UTILS ────────────────────────────────────────────────────
+function toast(msg,t=''){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(t?' '+t:'');clearTimeout(el._t);el._t=setTimeout(()=>el.className='toast',2800);}
+function setSync(s){const d=document.getElementById('syncDot'),l=document.getElementById('syncLabel');d.className='sync-dot'+(s==='ok'?'':s==='err'?' err':' warn');l.textContent=s==='ok'?'Synced':s==='err'?'Error':'Syncing…';}
+function fmt(n){return n?Number(n).toLocaleString('en-SA'):'—';}
+function daysOpen(d){return d?Math.floor((new Date()-new Date(d))/86400000):0;}
+function ageClass(d){return d>60?'stale':d>30?'old':'';}
+function today(){return new Date().toISOString().split('T')[0];}
+function nextStatus(s){const f=['PO Received','Quotation Sent','Quote Approved','Pending Invoice','Invoiced','Paid in Full'];const i=f.indexOf(s);return i>=0&&i<f.length-1?f[i+1]:null;}
+
+const BADGE_CLS={'PO Received':'b-po','Quotation Sent':'b-quoted','Quote Approved':'b-approved','Pending Invoice':'b-pending','Invoiced':'b-invoiced','Partial Payment':'b-partial','Overdue':'b-overdue','Paid in Full':'b-invoiced'};
+function badge(s){return`<span class="badge ${BADGE_CLS[s]||'b-po'}"><span class="bdot" style="background:currentColor"></span>${s}</span>`;}
+
+const PIPE_COLS_FIN=[{key:'PO Received',label:'PO received',color:'#9C9890'},{key:'Quotation Sent',label:'Quote sent',color:'#1A3B6E'},{key:'Quote Approved',label:'Approved',color:'#4A2080'},{key:'Pending Invoice',label:'Pending invoice',color:'#8A5A0A'},{key:'Invoiced',label:'Invoiced / Paid',color:'#1C6B4A'}];
+const PIPE_COLS_OPS=[{key:'PO Received',label:'PO received',color:'#9C9890'},{key:'Quotation Sent',label:'Quote sent',color:'#1A3B6E'},{key:'Quote Approved',label:'Approved',color:'#4A2080'},{key:'Pending Invoice',label:'Sent for invoicing',color:'#8A5A0A'}];
+
+// ── AUTH ─────────────────────────────────────────────────────
+async function initApp(user){
+  const{data:profile}=await db.from('profiles').select('*').eq('id',user.id).single();
+  currentUser=user;currentRole=profile?.role||'operations';
+  document.getElementById('sf-name').textContent=profile?.full_name||user.email;
+  const roleEl=document.getElementById('sf-role');
+  roleEl.textContent=currentRole.charAt(0).toUpperCase()+currentRole.slice(1);
+  roleEl.className='foot-role role-'+currentRole;
+  document.body.classList.remove('brole-admin','brole-finance','brole-operations');
+  document.body.classList.add('brole-'+currentRole);
+  // Role banner
+  const banner=document.getElementById('roleBanner');
+  const isOps=currentRole==='operations';
+  banner.style.display='flex';
+  banner.className='role-banner '+(currentRole==='admin'?'adm':currentRole==='finance'?'fin':'ops');
+  banner.innerHTML=`<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v4M8 11v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> ${currentRole==='admin'?'Administrator — full access':currentRole==='finance'?'Finance — full access including invoicing':'Operations — financial details restricted to Finance team'}`;
+  // Metrics visibility
+  document.getElementById('mc-pending').style.display=isOps?'none':'';
+  document.getElementById('mc-sent').style.display=isOps?'':'none';
+  document.getElementById('mc-overdue').style.display=isOps?'none':'';
+  document.getElementById('mc-invval').style.display=isOps?'none':'';
+  // Finance/admin tab visibility handled by CSS brole- classes
+  document.querySelectorAll('.finance-only').forEach(el=>el.style.display=(currentRole!=='operations')?'':'none');
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=(currentRole==='admin')?'':'none');
+  document.querySelectorAll('.ops-sent').forEach(el=>el.style.display=isOps?'':'none');
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  if(localStorage.getItem('flowtrack-dark')==='1'){document.body.classList.add('dark');updateDarkUI(true);}
+  await loadJobs();
+}
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const btn=document.getElementById('loginBtn');
+  if(!email||!pass){showErr('Enter email and password.');return;}
+  btn.disabled=true;btn.textContent='Signing in…';document.getElementById('loginErr').style.display='none';
+  try{const{data,error}=await db.auth.signInWithPassword({email,password:pass});if(error)throw error;await initApp(data.user);}
+  catch(e){showErr(e.message||'Login failed.');btn.disabled=false;btn.textContent='Sign in';}
+}
+function showErr(msg){const e=document.getElementById('loginErr');e.textContent=msg;e.style.display='block';document.getElementById('loginBtn').disabled=false;document.getElementById('loginBtn').textContent='Sign in';}
+async function doLogout(){await db.auth.signOut();document.getElementById('appShell').style.display='none';document.getElementById('loginScreen').style.display='flex';document.getElementById('loginPass').value='';}
+
+// ── LOAD ─────────────────────────────────────────────────────
+async function loadJobs(){
+  setSync('loading');
+  try{
+    const[jr,cr]=await Promise.all([
+      db.from('jobs').select('*').order('created_at',{ascending:false}),
+      db.from('contacts').select('*').order('name'),
+    ]);
+    jobs=jr.data||[];contacts=cr.data||[];
+    setSync('ok');refresh();
+  }catch(e){setSync('err');toast('Load failed: '+e.message,'err');}
+}
+
+// ── METRICS ──────────────────────────────────────────────────
+function updateMetrics(){
+  const open=jobs.filter(j=>j.status!=='Paid in Full');
+  const noQ=jobs.filter(j=>!j.quote_no&&j.status!=='Paid in Full');
+  const pend=jobs.filter(j=>j.status==='Pending Invoice');
+  const over=jobs.filter(j=>j.status==='Overdue');
+  const invd=jobs.filter(j=>['Invoiced','Partial Payment','Paid in Full'].includes(j.status));
+  const invVal=invd.reduce((s,j)=>s+(j.value||0),0);
+  document.getElementById('m-total').textContent=open.length;
+  document.getElementById('m-noquote').textContent=noQ.length;
+  document.getElementById('m-pending').textContent=pend.length;
+  document.getElementById('m-sent').textContent=pend.length;
+  document.getElementById('m-overdue').textContent=over.length;
+  document.getElementById('m-inv').textContent=invd.length;
+  document.getElementById('m-inv-sar').textContent='SAR '+invVal.toLocaleString('en-SA');
+  const parts=[];
+  const newN=jobs.filter(j=>j.is_new).length;
+  if(newN)parts.push(`<span><strong>${newN}</strong> new PO${newN>1?'s':''}</span>`);
+  if(noQ.length)parts.push(`<span><strong>${noQ.length}</strong> missing quotation</span>`);
+  if(pend.length)parts.push(`<span><strong>${pend.length}</strong> ready to invoice</span>`);
+  if(over.length)parts.push(`<span><strong>${over.length}</strong> overdue</span>`);
+  const nb=document.getElementById('notifBar');
+  if(parts.length){document.getElementById('notifItems').innerHTML=parts.join('<span style="opacity:.3;margin:0 4px">·</span>');nb.style.display='';}
+  else nb.style.display='none';
+  const total=noQ.length+pend.length+over.length;
+  const al=document.getElementById('nb-alert');
+  al.style.display=total>0?'':'none';al.textContent=total;
+}
+
+// ── PIPELINE ─────────────────────────────────────────────────
+function renderPipeline(){
+  const el=document.getElementById('view-pipeline');
+  const isOps=currentRole==='operations';
+  const COLS=isOps?PIPE_COLS_OPS:PIPE_COLS_FIN;
+  el.innerHTML=COLS.map(col=>{
+    const cj=col.key==='Invoiced'?jobs.filter(j=>['Invoiced','Partial Payment','Paid in Full'].includes(j.status)):jobs.filter(j=>j.status===col.key);
+    const cards=cj.map(j=>{
+      const d=daysOpen(j.po_date),ac=ageClass(d),noq=!j.quote_no&&col.key==='PO Received';
+      const valDisplay=isOps?'—':(j.value?'SAR '+Number(j.value).toLocaleString('en-SA'):'—');
+      return`<div class="pcard" onclick="openDetail('${j.id}')">
+        <div class="pcard-top"><span>${j.po}</span><span style="display:flex;gap:4px;align-items:center">${j.is_new?'<span class="tag-new">new</span>':''}${noq?'<span class="tag-warn" title="No quotation"></span>':''}</span></div>
+        <div class="pcard-client">${j.client}</div>
+        <div class="pcard-desc">${j.description||'—'}</div>
+        <div class="pcard-foot"><span class="pcard-val">${valDisplay}</span><span class="pcard-age ${ac}">${d}d</span></div>
+      </div>`;
+    }).join('')||'<div style="font-size:12px;color:var(--t3);text-align:center;padding:20px 8px">Empty</div>';
+    return`<div class="pcol"><div class="pcol-hd"><span class="pdot" style="background:${col.color}"></span><span class="pcol-title">${col.label}</span><span class="pcol-count">${cj.length}</span></div><div class="pbody">${cards}</div></div>`;
+  }).join('');
+}
+
+// ── TABLE ────────────────────────────────────────────────────
+function renderTable(){
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  const isOps=currentRole==='operations';
+  const filtered=jobs.filter(j=>{
+    const mf=currentFilter==='all'||j.status===currentFilter;
+    const ms=!q||[j.po,j.client,j.description,j.quote_no,j.invoice_no].some(v=>(v||'').toLowerCase().includes(q));
+    return mf&&ms;
+  });
+  const tbody=document.getElementById('tbody'),empty=document.getElementById('tEmpty');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='';return;}
+  empty.style.display='none';
+  document.querySelectorAll('th.finance-only,td.finance-only').forEach(el=>el.style.display=isOps?'none':'');
+  const allCb=document.getElementById('selAllCb');
+  if(allCb)allCb.checked=filtered.length>0&&filtered.every(j=>selectedIds.has(j.id));
+  tbody.innerHTML=filtered.map(j=>{
+    const d=daysOpen(j.po_date),ac=ageClass(d),checked=selectedIds.has(j.id)?'checked':'';
+    return`<tr>
+      <td class="cb-cell"><input class="cb" type="checkbox" ${checked} onchange="toggleSel('${j.id}',this.checked)"></td>
+      <td><span class="mono">${j.po}</span>${j.is_new?` <span class="badge b-pending" style="font-size:10px;padding:1px 6px">new</span>`:''}</td>
+      <td style="font-weight:500">${j.client}</td>
+      <td style="color:var(--t2);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${j.description||'—'}</td>
+      <td class="mono finance-only">${isOps?'':fmt(j.value)}</td>
+      <td class="mono">${j.po_date||'—'}</td>
+      <td>${j.quote_no?`<span class="mono">${j.quote_no}</span>`:'<span style="color:var(--red);font-size:12px">⚠ Missing</span>'}</td>
+      <td class="mono finance-only">${j.invoice_no||'<span style="color:var(--t3)">—</span>'}</td>
+      <td>${badge(j.status)}</td>
+      <td class="mono" style="${ac==='stale'?'color:var(--red)':ac==='old'?'color:var(--amber)':''}">${d}d</td>
+      <td style="display:flex;gap:5px">
+        <button class="btn btn-sm btn-ghost" onclick="openDetail('${j.id}')">View</button>
+        <button class="btn btn-sm" onclick="openEditModal('${j.id}')">Edit</button>
+      </td>
+    </tr>`;
+  }).join('');
+  updateSelToolbar();
+}
+
+// ── SUMMARY ──────────────────────────────────────────────────
+function renderSummary(){
+  const isOps=currentRole==='operations';
+  const ab=[{l:'0–15d',n:jobs.filter(j=>daysOpen(j.po_date)<=15).length,c:'#1C6B4A'},{l:'16–30d',n:jobs.filter(j=>{const d=daysOpen(j.po_date);return d>15&&d<=30}).length,c:'#8A5A0A'},{l:'31–60d',n:jobs.filter(j=>{const d=daysOpen(j.po_date);return d>30&&d<=60}).length,c:'#C47A1A'},{l:'60d+',n:jobs.filter(j=>daysOpen(j.po_date)>60).length,c:'#8B2020'}];
+  const maxA=Math.max(...ab.map(b=>b.n),1);
+  const cm={};jobs.forEach(j=>{cm[j.client]=(cm[j.client]||0)+(j.value||0);});
+  const clients=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const hideStatuses=['Pending Invoice','Invoiced','Partial Payment','Overdue','Paid in Full'];
+  const sm={};jobs.forEach(j=>{if(!isOps||!hideStatuses.includes(j.status))sm[j.status]=(sm[j.status]||0)+1;});
+  const sv=['PO Received','Quotation Sent','Quote Approved','Pending Invoice','Invoiced','Overdue'].map(s=>({s,v:jobs.filter(j=>j.status===s).reduce((a,j)=>a+(j.value||0),0)}));
+  const maxV=Math.max(...sv.map(x=>x.v),1);
+  const totalVal=jobs.reduce((a,j)=>a+(j.value||0),0);
+  const paidVal=jobs.filter(j=>j.status==='Paid in Full').reduce((a,j)=>a+(j.paid_amount||0),0);
+  const overdueVal=jobs.filter(j=>j.status==='Overdue').reduce((a,j)=>a+(j.value||0),0);
+  document.getElementById('sumGrid').innerHTML=`
+    <div class="sc"><h4>Aging report</h4>${ab.map(b=>`<div class="brow"><span class="blabel">${b.l}</span><div class="bwrap"><div class="bfill" style="width:${Math.round(b.n/maxA*100)}%;background:${b.c}"></div></div><span class="bcnt">${b.n}</span></div>`).join('')}</div>
+    <div class="sc"><h4>Top clients${isOps?'':' by value'}</h4>${clients.map(([n,v])=>`<div class="crow"><span>${n}</span>${isOps?'':`<span style="font-family:var(--mono);font-size:11px;color:var(--t2)">SAR ${Number(v).toLocaleString('en-SA')}</span>`}</div>`).join('')}</div>
+    <div class="sc"><h4>Status breakdown</h4>${Object.entries(sm).sort((a,b)=>b[1]-a[1]).map(([s,c])=>`<div class="crow"><span>${badge(s)}</span><span style="font-family:var(--mono);font-size:11px;color:var(--t2)">${c}</span></div>`).join('')}</div>
+    ${isOps?'':
+    `<div class="sc"><h4>Financial summary (SAR)</h4>
+      <div class="crow"><span>Total pipeline</span><span style="font-family:var(--mono);font-size:12px;font-weight:500">${Number(totalVal).toLocaleString('en-SA')}</span></div>
+      <div class="crow"><span>Collected</span><span style="font-family:var(--mono);font-size:12px;color:var(--green);font-weight:500">${Number(paidVal).toLocaleString('en-SA')}</span></div>
+      <div class="crow"><span>Overdue</span><span style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:500">${Number(overdueVal).toLocaleString('en-SA')}</span></div>
+      <div class="brow" style="margin-top:10px"><span class="blabel">Collected</span><div class="bwrap"><div class="bfill" style="width:${totalVal?Math.round(paidVal/totalVal*100):0}%;background:var(--green)"></div></div><span class="bcnt">${totalVal?Math.round(paidVal/totalVal*100):0}%</span></div>
+    </div>`}`;
+}
+
+// ── CONTACTS ─────────────────────────────────────────────────
+function renderClients(){
+  const clients=contacts.filter(c=>c.type==='client'||c.type==='both');
+  document.getElementById('clientsContent').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:500">Clients (${clients.length})</div>
+      <button class="btn btn-dark" onclick="openNewContact('client')">+ Add client</button>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+      <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>VAT #</th><th>CR #</th><th>Actions</th></tr></thead>
+      <tbody>${clients.map(c=>`<tr>
+        <td style="font-weight:500">${c.name}</td>
+        <td style="font-size:12px;color:var(--t2)">${c.email||'—'}</td>
+        <td style="font-size:12px">${c.phone||'—'}</td>
+        <td class="mono">${c.vat_number||'—'}</td>
+        <td class="mono">${c.cr_number||'—'}</td>
+        <td><button class="btn btn-sm btn-ghost" onclick="openEditContact('${c.id}')">Edit</button></td>
+      </tr>`).join('')}</tbody></table>
+      ${!clients.length?'<div class="empty">No clients yet. Click "+ Add client" to add one.</div>':''}
+    </div>`;
+}
+function renderVendors(){
+  const vendors=contacts.filter(c=>c.type==='vendor'||c.type==='both');
+  document.getElementById('vendorsContent').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:500">Vendors (${vendors.length})</div>
+      <button class="btn btn-dark" onclick="openNewContact('vendor')">+ Add vendor</button>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+      <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>VAT #</th><th>CR #</th><th>Actions</th></tr></thead>
+      <tbody>${vendors.map(c=>`<tr>
+        <td style="font-weight:500">${c.name}</td>
+        <td style="font-size:12px;color:var(--t2)">${c.email||'—'}</td>
+        <td style="font-size:12px">${c.phone||'—'}</td>
+        <td class="mono">${c.vat_number||'—'}</td>
+        <td class="mono">${c.cr_number||'—'}</td>
+        <td><button class="btn btn-sm btn-ghost" onclick="openEditContact('${c.id}')">Edit</button></td>
+      </tr>`).join('')}</tbody></table>
+      ${!vendors.length?'<div class="empty">No vendors yet. Click "+ Add vendor" to add one.</div>':''}
+    </div>`;
+}
+
+// ── VIEW ROUTING ─────────────────────────────────────────────
+function showView(v){
+  if(v==='summary'&&currentRole==='operations')return;
+  if(v==='users'&&currentRole!=='admin')return;
+  currentView=v;
+  ['pipeline','table','summary','clients','vendors','users'].forEach(n=>{
+    const el=document.getElementById('view-'+n);if(el)el.style.display=n===v?(n==='pipeline'?'grid':'block'):'none';
+    const tab=document.getElementById('tab-'+n);if(tab)tab.classList.toggle('active',n===v);
+    const nav=document.getElementById('nav-'+n);if(nav)nav.classList.toggle('active',n===v);
+  });
+  document.getElementById('viewTitle').textContent={pipeline:'Pipeline',table:'All jobs',summary:'Summary',clients:'Clients',vendors:'Vendors',users:'Manage users'}[v]||v;
+  if(v==='table')renderTable();
+  if(v==='pipeline')renderPipeline();
+  if(v==='summary')renderSummary();
+  if(v==='clients')renderClients();
+  if(v==='vendors')renderVendors();
+  if(v==='users')renderUsers();
+}
+function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderTable();}
+
+// ── FILE UPLOAD ───────────────────────────────────────────────
+function handleFileSelect(type,input){
+  const file=input.files[0];if(!file)return;
+  if(file.size>10*1024*1024){toast('Max 10MB','err');input.value='';return;}
+  pendingFiles[type]=file;
+  const zone=document.getElementById(type+'-upload-zone'),title=document.getElementById(type+'-upload-title'),rem=document.getElementById(type+'-upload-remove');
+  zone.classList.add('has-file');zone.classList.remove('required-missing');
+  title.textContent=file.name;rem.style.display='';
+}
+function removeFile(e,type){
+  e.stopPropagation();pendingFiles[type]=null;
+  document.getElementById('f-'+type+'-file').value='';
+  const zone=document.getElementById(type+'-upload-zone'),title=document.getElementById(type+'-upload-title'),rem=document.getElementById(type+'-upload-remove');
+  zone.classList.remove('has-file','required-missing');
+  title.textContent='Click to upload '+(type==='po'?'PO':'quotation')+' document';rem.style.display='none';
+}
+function resetUploadUI(){
+  pendingFiles={po:null,quote:null};
+  ['po','quote'].forEach(t=>{
+    const inp=document.getElementById('f-'+t+'-file');if(inp)inp.value='';
+    const zone=document.getElementById(t+'-upload-zone'),title=document.getElementById(t+'-upload-title'),rem=document.getElementById(t+'-upload-remove'),exist=document.getElementById(t+'-existing-file');
+    if(zone)zone.classList.remove('has-file','required-missing');
+    if(title)title.textContent='Click to upload '+(t==='po'?'PO':'quotation')+' document';
+    if(rem)rem.style.display='none';if(exist){exist.style.display='none';exist.innerHTML='';}
+  });
+}
+function showExistingFile(type,url,name){
+  if(!url)return;
+  const el=document.getElementById(type+'-existing-file');if(!el)return;
+  el.style.display='block';el.innerHTML=`<a class="file-link" href="${url}" target="_blank">📎 ${name||'View file'}</a>`;
+  if(!pendingFiles[type]){
+    const zone=document.getElementById(type+'-upload-zone'),title=document.getElementById(type+'-upload-title'),rem=document.getElementById(type+'-upload-remove');
+    zone.classList.add('has-file');title.textContent=name||'File uploaded';rem.style.display='';
+  }
+}
+async function uploadFile(file,jobId,type){
+  const ext=file.name.split('.').pop();
+  const path=`${jobId}/${type}-${Date.now()}.${ext}`;
+  const{data,error}=await db.storage.from('job-files').upload(path,file,{upsert:true});
+  if(error)throw error;
+  const{data:urlData}=db.storage.from('job-files').getPublicUrl(path);
+  return{url:urlData.publicUrl,name:file.name};
+}
+
+// ── CONTACT DROPDOWN ──────────────────────────────────────────
+function populateClientDropdown(selectedId){
+  const sel=document.getElementById('f-client-id');if(!sel)return;
+  const clients=contacts.filter(c=>c.type==='client'||c.type==='both');
+  sel.innerHTML='<option value="">Select client…</option>'+clients.map(c=>`<option value="${c.id}"${c.id===selectedId?' selected':''}>${c.name}</option>`).join('');
+}
+function setClientFromSelect(){
+  const sel=document.getElementById('f-client-id'),inp=document.getElementById('f-client');if(!sel||!inp)return;
+  const ct=contacts.find(c=>c.id===sel.value);if(ct)inp.value=ct.name;
+}
+
+// ── ADD/EDIT MODAL ────────────────────────────────────────────
+function openAddModal(){
+  const isOps=currentRole==='operations';
+  document.getElementById('f-id').value='';
+  document.getElementById('mTitle').textContent='Add new PO';
+  document.getElementById('deleteBtn').style.display='none';
+  ['f-po','f-client','f-desc','f-value','f-quote','f-qdate','f-qvalue','f-approvedate','f-inv','f-invdate','f-duedate','f-paiddate','f-paidamt','f-assigned','f-notes','f-tags'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('f-status').value='PO Received';
+  document.getElementById('f-podate').value=today();
+  document.getElementById('f-priority').value='';
+  ['f-inv','f-invdate','f-duedate','f-paiddate','f-paidamt'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=isOps;});
+  document.getElementById('invoice-lock-note').textContent=isOps?'— managed by Finance team':'';
+  resetUploadUI();populateClientDropdown('');
+  document.getElementById('mo').classList.add('open');
+}
+function openEditModal(id){
+  const j=jobs.find(x=>x.id===id);if(!j)return;
+  const isOps=currentRole==='operations';
+  document.getElementById('f-id').value=j.id;
+  document.getElementById('mTitle').textContent='Edit record';
+  document.getElementById('deleteBtn').style.display=currentRole==='admin'?'':'none';
+  const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  set('f-po',j.po);set('f-client',j.client);set('f-desc',j.description);set('f-value',j.value);
+  set('f-podate',j.po_date);set('f-quote',j.quote_no);set('f-qdate',j.quote_date);set('f-qvalue',j.quote_value);
+  set('f-approvedate',j.approve_date);set('f-inv',j.invoice_no);set('f-invdate',j.invoice_date);
+  set('f-duedate',j.due_date);set('f-paiddate',j.paid_date);set('f-paidamt',j.paid_amount);
+  set('f-assigned',j.assigned_to);set('f-notes',j.notes);set('f-tags',j.tags);
+  document.getElementById('f-status').value=j.status||'PO Received';
+  document.getElementById('f-priority').value=j.priority||'';
+  ['f-inv','f-invdate','f-duedate','f-paiddate','f-paidamt'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=isOps;});
+  document.getElementById('invoice-lock-note').textContent=isOps?'— managed by Finance team':'';
+  resetUploadUI();
+  if(j.po_file_url)showExistingFile('po',j.po_file_url,j.po_file_name);
+  if(j.quote_file_url)showExistingFile('quote',j.quote_file_url,j.quote_file_name);
+  populateClientDropdown(contacts.find(c=>c.name===j.client)?.id||'');
+  document.getElementById('mo').classList.add('open');
+}
+function closeModal(){document.getElementById('mo').classList.remove('open');}
+
+// ── SAVE ─────────────────────────────────────────────────────
+async function saveEntry(){
+  const po=document.getElementById('f-po').value.trim();
+  const client=document.getElementById('f-client').value.trim()||contacts.find(c=>c.id===document.getElementById('f-client-id').value)?.name||'';
+  if(!po||!client){toast('PO number and client are required','err');return;}
+  const g=id=>document.getElementById(id)?.value||null;
+  const isOps=currentRole==='operations';
+  const editId=document.getElementById('f-id').value;
+  const existing=editId?jobs.find(x=>x.id===editId):null;
+  // File validation
+  const hasPoFile=pendingFiles.po||(existing&&existing.po_file_url);
+  const quoteNo=g('f-quote')?.trim();
+  const hasQuoteFile=pendingFiles.quote||(existing&&existing.quote_file_url);
+  let missing=[];
+  if(!hasPoFile){document.getElementById('po-upload-zone').classList.add('required-missing');missing.push('PO document');}
+  else document.getElementById('po-upload-zone').classList.remove('required-missing');
+  if(quoteNo&&!hasQuoteFile){document.getElementById('quote-upload-zone').classList.add('required-missing');missing.push('Quotation document');}
+  else document.getElementById('quote-upload-zone').classList.remove('required-missing');
+  if(missing.length){toast('Please upload: '+missing.join(' & '),'err');return;}
+
+  const entry={
+    po,client,description:g('f-desc'),value:parseFloat(g('f-value'))||null,
+    po_date:g('f-podate'),quote_no:g('f-quote'),quote_date:g('f-qdate'),
+    quote_value:parseFloat(g('f-qvalue'))||null,approve_date:g('f-approvedate'),
+    status:g('f-status'),assigned_to:g('f-assigned'),notes:g('f-notes'),
+    tags:g('f-tags'),priority:g('f-priority'),is_new:false,
+    po_file_url:existing?.po_file_url||null,po_file_name:existing?.po_file_name||null,
+    quote_file_url:existing?.quote_file_url||null,quote_file_name:existing?.quote_file_name||null,
+    updated_at:new Date().toISOString(),
+  };
+  if(!isOps){
+    entry.invoice_no=g('f-inv');entry.invoice_date=g('f-invdate');entry.due_date=g('f-duedate');
+    entry.paid_date=g('f-paiddate');entry.paid_amount=parseFloat(g('f-paidamt'))||0;
+  }else if(existing){
+    entry.invoice_no=existing.invoice_no;entry.invoice_date=existing.invoice_date;
+    entry.due_date=existing.due_date;entry.paid_date=existing.paid_date;entry.paid_amount=existing.paid_amount;
+  }
+  const btn=document.getElementById('saveBtn');btn.disabled=true;btn.textContent='Saving…';setSync('loading');
+  try{
+    let jobId=editId;
+    if(!jobId){
+      const{data,error}=await db.from('jobs').insert({...entry,created_at:new Date().toISOString()}).select().single();
+      if(error)throw error;jobId=data.id;
+    }
+    if(pendingFiles.po){btn.textContent='Uploading PO…';const{url,name}=await uploadFile(pendingFiles.po,jobId,'po');entry.po_file_url=url;entry.po_file_name=name;}
+    if(pendingFiles.quote){btn.textContent='Uploading quote…';const{url,name}=await uploadFile(pendingFiles.quote,jobId,'quote');entry.quote_file_url=url;entry.quote_file_name=name;}
+    if(editId){const{error}=await db.from('jobs').update(entry).eq('id',editId);if(error)throw error;toast('Record updated','ok');}
+    else{const{error}=await db.from('jobs').update(entry).eq('id',jobId);if(error)throw error;toast('PO added','ok');}
+    closeModal();await loadJobs();
+  }catch(e){setSync('err');toast('Save failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save record';}
+}
+
+// ── DELETE ────────────────────────────────────────────────────
+async function deleteEntry(){
+  if(currentRole!=='admin'){toast('Only Admins can delete records','err');return;}
+  const id=document.getElementById('f-id').value;if(!id||!confirm('Delete this record permanently?'))return;
+  const{error}=await db.from('jobs').delete().eq('id',id);
+  if(error){toast('Delete failed: '+error.message,'err');return;}
+  toast('Deleted','ok');closeModal();await loadJobs();
+}
+
+// ── ADVANCE STATUS MODAL ──────────────────────────────────────
+const STAGE_FIELDS={
+  'Quotation Sent':[{id:'adv-quote',label:'Quotation number *',type:'text',placeholder:'QT-2026-001',dbKey:'quote_no'},{id:'adv-qdate',label:'Quote date',type:'date',dbKey:'quote_date'},{id:'adv-qvalue',label:'Quote value (SAR)',type:'number',placeholder:'0',dbKey:'quote_value'},{id:'adv-quote-file',label:'Quotation document *',type:'file',dbKey:'quoteFile'}],
+  'Quote Approved':[{id:'adv-approvedate',label:'Client approval date',type:'date',dbKey:'approve_date'},{id:'adv-notes',label:'Approval notes',type:'textarea',placeholder:'e.g. Approved via email on…',dbKey:'notes'}],
+  'Pending Invoice':[{id:'adv-notes',label:'Notes for finance team',type:'textarea',placeholder:'Any invoicing instructions…',dbKey:'notes'}],
+  'Invoiced':[{id:'adv-inv',label:'Invoice number *',type:'text',placeholder:'INV-2026-001',dbKey:'invoice_no'},{id:'adv-invdate',label:'Invoice date',type:'date',dbKey:'invoice_date'},{id:'adv-duedate',label:'Due date',type:'date',dbKey:'due_date'}],
+  'Paid in Full':[{id:'adv-paiddate',label:'Payment date',type:'date',dbKey:'paid_date'},{id:'adv-paidamt',label:'Amount paid (SAR) *',type:'number',placeholder:'0',dbKey:'paid_amount'}],
+};
+const STAGE_COLORS={'Quotation Sent':'#1A3B6E','Quote Approved':'#4A2080','Pending Invoice':'#8A5A0A','Invoiced':'#1C6B4A','Paid in Full':'#1C6B4A'};
+
+function openAdvModal(id){
+  const j=jobs.find(x=>x.id===id);if(!j)return;
+  const next=nextStatus(j.status);if(!next)return;
+  const isOps=currentRole==='operations';
+  if(isOps&&['Invoiced','Paid in Full','Partial Payment'].includes(next)){toast('Invoicing stages can only be updated by Finance','err');return;}
+  advanceJobId=id;
+  const color=STAGE_COLORS[next]||'#6B6760';
+  document.getElementById('adv-title').textContent='Advance to: '+next;
+  document.getElementById('adv-stage-badge').innerHTML=`<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span> ${j.po} → <strong>${next}</strong>`;
+  const fields=STAGE_FIELDS[next]||[];
+  document.getElementById('adv-fields').innerHTML=fields.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">${fields.map(f=>{
+    if(f.type==='file')return`<div class="frow" style="grid-column:1/-1"><label>${f.label}</label><div class="upload-zone" id="${f.id}-zone" onclick="document.getElementById('${f.id}').click()"><input type="file" id="${f.id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:3;width:100%;height:100%" onchange="handleAdvFile('${f.id}')"><div class="upload-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div class="upload-text"><div class="upload-title" id="${f.id}-title">Click to upload</div></div></div></div>`;
+    if(f.type==='textarea')return`<div class="frow" style="grid-column:1/-1"><label>${f.label}</label><textarea id="${f.id}" placeholder="${f.placeholder||''}"></textarea></div>`;
+    return`<div class="frow"><label>${f.label}</label><input id="${f.id}" type="${f.type}" placeholder="${f.placeholder||''}"></div>`;
+  }).join('')}</div>`:'<p style="font-size:13px;color:var(--t2)">No additional information required.</p>';
+  document.getElementById('adv-note').textContent=next==='Pending Invoice'?'Finance team will be notified to raise an invoice.':'';
+  document.getElementById('advanceMo').classList.add('open');
+}
+function handleAdvFile(inputId){const inp=document.getElementById(inputId);const f=inp.files[0];if(!f)return;document.getElementById(inputId+'-zone')?.classList.add('has-file');document.getElementById(inputId+'-title').textContent=f.name;}
+function closeAdvModal(){document.getElementById('advanceMo').classList.remove('open');advanceJobId=null;}
+
+async function saveAdvance(){
+  const j=jobs.find(x=>x.id===advanceJobId);if(!j)return;
+  const next=nextStatus(j.status);if(!next)return;
+  const fields=STAGE_FIELDS[next]||[];
+  const btn=document.getElementById('adv-save-btn');btn.disabled=true;btn.textContent='Saving…';setSync('loading');
+  try{
+    const updates={status:next,is_new:false,updated_at:new Date().toISOString()};
+    for(const f of fields){
+      if(f.type==='file')continue;
+      const el=document.getElementById(f.id);
+      if(el&&el.value){if(f.label.includes('*')&&!el.value.trim()){toast('Please fill in: '+f.label.replace(' *',''),'err');btn.disabled=false;btn.textContent='Advance';return;}updates[f.dbKey]=f.type==='number'?parseFloat(el.value)||0:el.value;}
+    }
+    for(const f of fields.filter(x=>x.type==='file')){
+      const inp=document.getElementById(f.id);
+      if(inp&&inp.files[0]){btn.textContent='Uploading…';const{url,name}=await uploadFile(inp.files[0],advanceJobId,'quote');updates.quote_file_url=url;updates.quote_file_name=name;}
+      else if(f.label.includes('*')&&!j.quote_file_url){toast('Please upload: '+f.label.replace(' *',''),'err');btn.disabled=false;btn.textContent='Advance';return;}
+    }
+    const{error}=await db.from('jobs').update(updates).eq('id',advanceJobId);
+    if(error)throw error;
+    toast('→ '+next,'ok');closeAdvModal();closeDetail();await loadJobs();
+  }catch(e){setSync('err');toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Advance';}
+}
+
+// ── DETAIL PANEL ─────────────────────────────────────────────
+async function openDetail(id){
+  const j=jobs.find(x=>x.id===id);if(!j)return;
+  const isOps=currentRole==='operations';
+  if(j.is_new){await db.from('jobs').update({is_new:false,updated_at:new Date().toISOString()}).eq('id',id);j.is_new=false;updateMetrics();}
+  document.getElementById('dp-po').textContent=j.po;
+  document.getElementById('dp-client').textContent=j.client;
+  const allStages=['PO Received','Quotation Sent','Quote Approved','Pending Invoice','Invoiced','Paid in Full'];
+  const opsStages=['PO Received','Quotation Sent','Quote Approved','Pending Invoice'];
+  const stages=isOps?opsStages:allStages;
+  const stageLabels={'Pending Invoice':isOps?'Sent for invoicing':'Pending invoice'};
+  const ci=stages.indexOf(j.status);
+  const dates={'PO Received':j.po_date,'Quotation Sent':j.quote_date,'Quote Approved':j.approve_date,'Pending Invoice':j.approve_date||'—','Invoiced':j.invoice_date,'Paid in Full':j.paid_date};
+  const tl=stages.map((s,i)=>`<div class="tl-item"><div class="tl-dot ${i<ci?'done':i===ci?'cur':''}"></div><div><div class="tl-label">${stageLabels[s]||s}</div><div class="tl-date">${dates[s]||'—'}</div></div></div>`).join('');
+  const bal=(j.value||0)-(j.paid_amount||0);
+  const ns=nextStatus(j.status);
+  const canAdvance=ns&&!(isOps&&['Invoiced','Paid in Full','Partial Payment'].includes(ns));
+  document.getElementById('dp-body').innerHTML=`
+    <div class="dsec"><div class="dsec-title">Job details</div>
+      ${j.description?`<div class="drow"><span class="dk">Description</span><span class="dv">${j.description}</span></div>`:''}
+      ${j.priority?`<div class="drow"><span class="dk">Priority</span><span class="dv"><span class="badge ${j.priority==='Urgent'?'b-overdue':'b-pending'}">${j.priority}</span></span></div>`:''}
+      <div class="drow"><span class="dk">PO value</span><span class="dv mono">${isOps?'<em style="color:var(--t3);font-weight:400;font-size:12px">Finance only</em>':'SAR '+fmt(j.value)}</span></div>
+      <div class="drow"><span class="dk">Quotation #</span><span class="dv mono" style="${!j.quote_no?'color:var(--red)':''}">${j.quote_no||'⚠ Not set'}</span></div>
+      ${!isOps?`<div class="drow"><span class="dk">Invoice #</span><span class="dv mono">${j.invoice_no||'—'}</span></div>
+      <div class="drow"><span class="dk">Due date</span><span class="dv mono">${j.due_date||'—'}</span></div>
+      <div class="drow"><span class="dk">Paid amount</span><span class="dv mono">SAR ${fmt(j.paid_amount)}</span></div>
+      <div class="drow"><span class="dk">Balance</span><span class="dv mono" style="color:${bal>0?'var(--red)':'var(--green)'}">SAR ${fmt(bal)}</span></div>`:''}
+      <div class="drow"><span class="dk">Assigned to</span><span class="dv">${j.assigned_to||'—'}</span></div>
+      <div class="drow"><span class="dk">Status</span><span class="dv">${badge(j.status)}</span></div>
+      ${j.po_file_url?`<div class="drow"><span class="dk">PO doc</span><span class="dv"><a class="file-link" href="${j.po_file_url}" target="_blank">📎 ${j.po_file_name||'View'}</a></span></div>`:''}
+      ${j.quote_file_url?`<div class="drow"><span class="dk">Quote doc</span><span class="dv"><a class="file-link" href="${j.quote_file_url}" target="_blank">📎 ${j.quote_file_name||'View'}</a></span></div>`:''}
+    </div>
+    ${j.notes?`<div class="dsec"><div class="dsec-title">Notes</div><div style="font-size:13px;color:var(--t2);line-height:1.6;padding-top:4px">${j.notes}</div></div>`:''}
+    <div class="dsec"><div class="dsec-title">Progress timeline</div><div class="tl">${tl}</div></div>
+    <div class="d-actions">
+      <button class="btn btn-dark" style="width:100%;justify-content:center" onclick="closeDetail();openEditModal('${j.id}')">Edit this record</button>
+      ${canAdvance?`<button class="btn" style="width:100%;justify-content:center" onclick="openAdvModal('${j.id}')">Advance → ${ns}</button>`:''}
+    </div>`;
+  document.getElementById('do').classList.add('open');
+  document.getElementById('dp').classList.add('open');
+}
+function closeDetail(){document.getElementById('do').classList.remove('open');document.getElementById('dp').classList.remove('open');}
+
+// ── CONTACTS CRUD ─────────────────────────────────────────────
+function openNewContact(type){
+  document.getElementById('ct-id').value='';
+  document.getElementById('ct-title').textContent='Add '+(type||'contact');
+  document.getElementById('ctDeleteBtn').style.display='none';
+  ['ct-name','ct-email','ct-phone','ct-vat','ct-cr','ct-address','ct-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('ct-type').value=type||'client';
+  document.getElementById('contactMo').classList.add('open');
+}
+function openEditContact(id){
+  const c=contacts.find(x=>x.id===id);if(!c)return;
+  document.getElementById('ct-id').value=c.id;
+  document.getElementById('ct-title').textContent='Edit contact';
+  document.getElementById('ctDeleteBtn').style.display='';
+  const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  set('ct-name',c.name);set('ct-email',c.email);set('ct-phone',c.phone);set('ct-vat',c.vat_number);set('ct-cr',c.cr_number);set('ct-address',c.address);set('ct-notes',c.notes);
+  document.getElementById('ct-type').value=c.type||'client';
+  document.getElementById('contactMo').classList.add('open');
+}
+function closeContact(){document.getElementById('contactMo').classList.remove('open');}
+async function saveContact(){
+  const name=document.getElementById('ct-name').value.trim();
+  if(!name){toast('Name is required','err');return;}
+  const editId=document.getElementById('ct-id').value;
+  const g=id=>document.getElementById(id)?.value||null;
+  const payload={name,type:document.getElementById('ct-type').value,email:g('ct-email'),phone:g('ct-phone'),vat_number:g('ct-vat'),cr_number:g('ct-cr'),address:g('ct-address'),notes:g('ct-notes'),updated_at:new Date().toISOString()};
+  const btn=document.getElementById('ctSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    if(editId){const{error}=await db.from('contacts').update(payload).eq('id',editId);if(error)throw error;toast('Contact updated','ok');}
+    else{const{error}=await db.from('contacts').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Contact added','ok');}
+    closeContact();await loadJobs();
+    if(currentView==='clients')renderClients();
+    if(currentView==='vendors')renderVendors();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save';}
+}
+async function deleteContact(){
+  const id=document.getElementById('ct-id').value;if(!id||!confirm('Delete this contact?'))return;
+  const{error}=await db.from('contacts').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok');closeContact();await loadJobs();
+}
+
+// ── SELECTION ─────────────────────────────────────────────────
+function toggleSel(id,checked){checked?selectedIds.add(id):selectedIds.delete(id);updateSelToolbar();}
+function toggleSelAll(checked){
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  jobs.filter(j=>{const mf=currentFilter==='all'||j.status===currentFilter;const ms=!q||[j.po,j.client,j.description,j.quote_no,j.invoice_no].some(v=>(v||'').toLowerCase().includes(q));return mf&&ms;}).forEach(j=>checked?selectedIds.add(j.id):selectedIds.delete(j.id));
+  renderTable();
+}
+function selectAll(){toggleSelAll(true);const cb=document.getElementById('selAllCb');if(cb)cb.checked=true;}
+function clearSel(){selectedIds.clear();const cb=document.getElementById('selAllCb');if(cb)cb.checked=false;renderTable();}
+function updateSelToolbar(){const tb=document.getElementById('selToolbar'),cnt=document.getElementById('selCount');if(selectedIds.size>0){tb.classList.add('visible');if(cnt)cnt.textContent=selectedIds.size;}else tb.classList.remove('visible');}
+
+// ── USERS ─────────────────────────────────────────────────────
+async function renderUsers(){
+  const grid=document.getElementById('usersGrid');
+  grid.innerHTML='<div class="loading"><div class="spinner"></div>Loading…</div>';
+  try{
+    const{data}=await db.from('profiles').select('*').order('created_at');
+    const users=data||[];
+    const ini=name=>(name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const roleColors={admin:'background:var(--ink);color:var(--ink-fg)',finance:'background:var(--bbg);color:var(--blue)',operations:'background:var(--gbg);color:var(--green)'};
+    grid.innerHTML=users.map(u=>`<div class="user-card">
+      <div class="user-avatar">${ini(u.full_name)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;font-size:13px">${u.full_name||'—'}</div>
+        <div class="user-role-badge" style="${roleColors[u.role]||''}">${u.role||'—'}</div>
+      </div>
+      ${currentUser&&u.id!==currentUser.id?`<div style="display:flex;flex-direction:column;gap:5px">
+        <button class="btn btn-sm btn-ghost" onclick="toggleRole('${u.id}','${u.role}','${u.full_name||''}')">Change role</button>
+        <button class="btn btn-sm btn-danger" onclick="openDeleteUserModal('${u.id}','${u.full_name||u.id}')">Delete</button>
+      </div>`:'<span style="font-size:11px;color:var(--t3)">You</span>'}
+    </div>`).join('')+`<div style="background:var(--surface);border:1px dashed var(--border2);border-radius:var(--rl);padding:20px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:var(--t3);font-size:13px;transition:all .15s" onclick="openInviteModal()" onmouseover="this.style.borderColor='var(--ink)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--t3)'">
+      + Invite another team member
+    </div>`;
+  }catch(e){grid.innerHTML=`<div class="empty">Failed to load: ${e.message}</div>`;}
+}
+async function toggleRole(userId,currentR,name){
+  const newRole=prompt(`Change ${name||'this user'} role to:\n1. operations\n2. finance\n3. admin\n\nEnter role name:`,'finance');
+  if(!newRole||!['operations','finance','admin'].includes(newRole.trim().toLowerCase())){toast('Invalid role','err');return;}
+  const confirmed=newRole.trim().toLowerCase();
+  if(!confirm(`Change ${name} to ${confirmed}?`))return;
+  const{error}=await db.from('profiles').update({role:confirmed}).eq('id',userId);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast(`Role updated to ${confirmed}`,'ok');renderUsers();
+}
+function openInviteModal(){
+  ['inv-name','inv-email','inv-pass'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inv-role').value='operations';
+  document.getElementById('inviteMo').classList.add('open');
+}
+async function inviteUser(){
+  const name=document.getElementById('inv-name').value.trim();
+  const email=document.getElementById('inv-email').value.trim();
+  const pass=document.getElementById('inv-pass').value;
+  const role=document.getElementById('inv-role').value;
+  if(!name||!email||!pass){toast('All fields required','err');return;}
+  if(pass.length<6){toast('Password must be at least 6 characters','err');return;}
+  const btn=document.getElementById('inviteBtn');btn.disabled=true;btn.textContent='Creating…';
+  try{
+    const tempClient=createClient(SUPA_URL,SUPA_KEY);
+    const{data,error}=await tempClient.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+    if(error)throw error;
+    if(!data.user)throw new Error('User creation failed — check email confirmation settings in Supabase.');
+    const{error:pe}=await db.from('profiles').insert({id:data.user.id,full_name:name,role});
+    if(pe)throw pe;
+    toast(`${name} invited as ${role} ✓`,'ok');
+    document.getElementById('inviteMo').classList.remove('open');
+    renderUsers();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Create account';}
+}
+function openDeleteUserModal(id,name){
+  deleteTargetId=id;deleteTargetName=name;
+  document.getElementById('du-name').textContent=name;
+  document.getElementById('du-password').value='';
+  document.getElementById('du-status').textContent='';
+  document.getElementById('du-confirm-btn').disabled=false;document.getElementById('du-confirm-btn').textContent='Delete account';
+  document.getElementById('deleteUserMo').classList.add('open');
+  setTimeout(()=>document.getElementById('du-password').focus(),100);
+}
+async function confirmDeleteUser(){
+  const password=document.getElementById('du-password').value;if(!password){toast('Enter your password','err');return;}
+  const btn=document.getElementById('du-confirm-btn'),status=document.getElementById('du-status');
+  btn.disabled=true;btn.textContent='Verifying…';
+  try{
+    const{error:authErr}=await db.auth.signInWithPassword({email:currentUser.email,password});
+    if(authErr)throw new Error('Incorrect password. Please try again.');
+    btn.textContent='Deleting…';status.textContent='Removing user…';
+    const{error}=await db.from('profiles').delete().eq('id',deleteTargetId);
+    if(error)throw error;
+    toast(`${deleteTargetName} removed ✓`,'ok');
+    document.getElementById('deleteUserMo').classList.remove('open');
+    renderUsers();
+  }catch(e){status.textContent='';btn.disabled=false;btn.textContent='Delete account';toast(e.message,'err');}
+}
+
+// ── EMAIL / EXPORT ────────────────────────────────────────────
+function openEmailModal(src){
+  if(currentRole==='operations'){toast('Only Finance and Admin can send reports','err');return;}
+  exportSource=src||'table';
+  const selOpt=document.getElementById('email-type-sel');
+  if(selOpt)selOpt.style.display=exportSource==='sel'?'':'none';
+  if(exportSource==='sel')document.getElementById('email-type').value='selection';
+  else if(document.getElementById('email-type').value==='selection')document.getElementById('email-type').value='full';
+  recipients=[];renderRecipientTags();
+  setReportAction('email');
+  document.querySelectorAll('.fmt-pill').forEach(b=>b.classList.remove('active'));
+  document.getElementById('fmt-html').classList.add('active');reportFmt='html';
+  updateEmailPreview();
+  document.getElementById('emailStatus').textContent='';
+  document.getElementById('emailMo').classList.add('open');
+}
+function openExportModal(src){
+  if(currentRole==='operations'){toast('Only Finance and Admin can export','err');return;}
+  openEmailModal(src);setTimeout(()=>setReportAction('download'),50);
+}
+function closeEmailModal(){document.getElementById('emailMo').classList.remove('open');}
+function setReportAction(action){
+  reportAction=action;
+  ['email','download','preview'].forEach(a=>{const btn=document.getElementById('rat-'+a);if(!btn)return;btn.style.background=a===action?'var(--ink)':'var(--surface)';btn.style.color=a===action?'var(--ink-fg)':'var(--t2)';});
+  const lbl=document.getElementById('reportActionLabel');if(lbl)lbl.textContent=action==='email'?'Send report':action==='download'?'Download':'Preview';
+  const recip=document.getElementById('fsec-recipients');if(recip)recip.style.display=action==='email'?'':'none';
+  const htmlPill=document.getElementById('fmt-html');if(htmlPill)htmlPill.style.display=action==='download'?'none':'';
+  if(action==='download'&&reportFmt==='html'){reportFmt='csv';document.querySelectorAll('.fmt-pill').forEach(b=>b.classList.remove('active'));document.getElementById('fmt-csv').classList.add('active');}
+}
+function setFmt(fmt,btn){reportFmt=fmt;document.querySelectorAll('.fmt-pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');updateEmailPreview();}
+function addRecipient(){const v=document.getElementById('recipientInput').value.trim().toLowerCase();if(!v||!v.includes('@')){toast('Enter valid email','err');return;}if(recipients.includes(v)){toast('Already added','err');return;}recipients.push(v);document.getElementById('recipientInput').value='';renderRecipientTags();}
+function removeRecipient(e){recipients=recipients.filter(r=>r!==e);renderRecipientTags();}
+function renderRecipientTags(){document.getElementById('recipientTags').innerHTML=recipients.map(r=>`<span class="rtag">${r}<span class="rtag-remove" onclick="removeRecipient('${r}')">×</span></span>`).join('');}
+
+function getReportRows(type){
+  if(type==='selection')return jobs.filter(j=>selectedIds.has(j.id));
+  if(type==='pending')return jobs.filter(j=>j.status==='Pending Invoice');
+  if(type==='overdue')return jobs.filter(j=>j.status==='Overdue');
+  if(type==='noquote')return jobs.filter(j=>!j.quote_no&&j.status!=='Paid in Full');
+  return jobs.filter(j=>j.status!=='Paid in Full');
+}
+function getReportTitle(type){const m={full:'Full Status Report',pending:'Pending Invoices',overdue:'Overdue Jobs',noquote:'Missing Quotations',summary:'Executive Summary',selection:'Selected Records'};return m[type]||'Report';}
+
+function updateEmailPreview(){
+  const type=document.getElementById('email-type').value;
+  const rows=getReportRows(type);
+  const el=document.getElementById('emailPreview');if(!el)return;
+  if(type==='summary'){
+    const now=new Date().toLocaleDateString('en-SA',{year:'numeric',month:'long',day:'numeric'});
+    el.textContent=`FlowOps — Executive Summary\nGenerated: ${now}\n${'─'.repeat(40)}\n\nTotal open jobs: ${jobs.filter(j=>j.status!=='Paid in Full').length}\nPending invoice: ${jobs.filter(j=>j.status==='Pending Invoice').length}\nOverdue: ${jobs.filter(j=>j.status==='Overdue').length}\nMissing quotation: ${jobs.filter(j=>!j.quote_no&&j.status!=='Paid in Full').length}`;
+    return;
+  }
+  const lines=[`FlowOps — ${getReportTitle(type)}`,'─'.repeat(50),''];
+  rows.slice(0,5).forEach(j=>{lines.push(`${j.po} | ${j.client} | ${j.status} | ${daysOpen(j.po_date)}d`);});
+  if(rows.length>5)lines.push(`... and ${rows.length-5} more`);
+  el.textContent=lines.join('\n');
+}
+
+async function executeReport(){
+  if(reportAction==='preview'){previewReport();return;}
+  if(reportAction==='download'){await downloadReport();return;}
+  await sendReport();
+}
+function previewReport(){
+  const type=document.getElementById('email-type').value;
+  const rows=getReportRows(type);
+  const title=getReportTitle(type);
+  const now=new Date().toLocaleDateString('en-SA',{year:'numeric',month:'long',day:'numeric'});
+  const w=window.open('','_blank','width=820,height=700,scrollbars=yes');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title><style>body{margin:24px;font-family:'Segoe UI',sans-serif;font-size:13px}table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #eee}th{background:#f5f5f5;font-size:11px;text-transform:uppercase;letter-spacing:.06em}h1{font-size:18px;font-weight:500;margin-bottom:4px}p{color:#888;font-size:12px;margin-bottom:20px}</style></head><body><h1>FlowOps — ${title}</h1><p>Generated: ${now} · ${rows.length} records</p><table><thead><tr><th>PO #</th><th>Client</th><th>Status</th><th>PO Date</th><th>Quote #</th><th>Days open</th></tr></thead><tbody>${rows.map(j=>`<tr><td>${j.po||'—'}</td><td>${j.client||'—'}</td><td>${j.status||'—'}</td><td>${j.po_date||'—'}</td><td>${j.quote_no||'⚠ Missing'}</td><td>${daysOpen(j.po_date)}d</td></tr>`).join('')}</tbody></table></body></html>`);
+  w.document.close();closeEmailModal();
+}
+async function downloadReport(){
+  const type=document.getElementById('email-type').value;
+  const rows=getReportRows(type);
+  const title=getReportTitle(type);
+  const safeName=title.replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  const headers=['PO#','Client','Description','Value','PO Date','Quote#','Invoice#','Status','Days open','Assigned','Notes'];
+  const rowData=rows.map(j=>[j.po,j.client,j.description,j.value,j.po_date,j.quote_no,j.invoice_no,j.status,daysOpen(j.po_date),j.assigned_to,j.notes]);
+  if(reportFmt==='csv'){
+    const csv=[headers.join(','),...rowData.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+    triggerDownload('data:text/csv;charset=utf-8,'+encodeURIComponent(csv),safeName+'.csv');
+    toast('CSV downloaded ✓','ok');
+  }else if(reportFmt==='excel'){
+    const xmlRows=[headers,...rowData].map(r=>'<Row>'+r.map(v=>'<Cell><Data ss:Type="'+(typeof v==='number'?'Number':'String')+'">'+(v||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</Data></Cell>').join('')+'</Row>').join('');
+    const xml='<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="FlowOps"><Table>'+xmlRows+'</Table></Worksheet></Workbook>';
+    triggerDownload('data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(xml),safeName+'.xls');
+    toast('Excel downloaded ✓','ok');
+  }else{
+    previewReport();return;
+  }
+  closeEmailModal();
+}
+async function sendReport(){
+  if(!recipients.length){toast('Add at least one recipient','err');return;}
+  const type=document.getElementById('email-type').value;
+  const rows=getReportRows(type);
+  const title=getReportTitle(type);
+  const now=new Date().toLocaleDateString('en-SA',{year:'numeric',month:'long',day:'numeric'});
+  const btn=document.getElementById('sendEmailBtn'),statusEl=document.getElementById('emailStatus');
+  btn.disabled=true;btn.textContent='Sending…';statusEl.textContent='Preparing…';
+  try{
+    const plainBody=rows.slice(0,50).map(j=>`${j.po} | ${j.client} | ${j.status} | SAR ${fmt(j.value)} | ${daysOpen(j.po_date)}d`).join('\n');
+    for(const to of recipients){
+      statusEl.textContent=`Sending to ${to}…`;
+      await emailjs.send(EJS_SERVICE,EJS_TEMPLATE,{to_email:to,to_name:to.split('@')[0],from_name:'FlowOps',subject:`FlowOps: ${title} — ${now}`,report_title:title,report_date:now,plain_body:plainBody,html_body:`<pre style="font-family:monospace;font-size:12px">${plainBody}</pre>`,sender_email:currentUser.email},EJS_KEY);
+    }
+    toast(`Report sent to ${recipients.length} recipient${recipients.length>1?'s':''}! ✓`,'ok');
+    closeEmailModal();
+  }catch(e){statusEl.textContent='';toast('Send failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Send report';statusEl.textContent='';}
+}
+function triggerDownload(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click();}
+function exportCSV(){openExportModal('table');}
+
+// ── REAL-TIME ─────────────────────────────────────────────────
+db.channel('jobs-rt').on('postgres_changes',{event:'*',schema:'public',table:'jobs'},()=>loadJobs()).subscribe();
+
+// ── DARK MODE ─────────────────────────────────────────────────
+function toggleDark(){const d=document.body.classList.toggle('dark');localStorage.setItem('flowtrack-dark',d?'1':'0');updateDarkUI(d);}
+function updateDarkUI(d){const t=document.getElementById('darkTrack'),l=document.getElementById('darkLabel');if(t)t.classList.toggle('on',d);if(l)l.textContent=d?'Light mode':'Dark mode';}
+
+// ── REFRESH ───────────────────────────────────────────────────
+function refresh(){
+  updateMetrics();
+  if(currentView==='pipeline')renderPipeline();
+  if(currentView==='table')renderTable();
+  if(currentView==='summary')renderSummary();
+  if(currentView==='clients')renderClients();
+  if(currentView==='vendors')renderVendors();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+  document.getElementById('emailMo').addEventListener('click',e=>{if(e.target===e.currentTarget)closeEmailModal();});
+  document.getElementById('advanceMo').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAdvModal();});
+  document.getElementById('deleteUserMo').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+  document.getElementById('inviteMo').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+  document.getElementById('contactMo').addEventListener('click',e=>{if(e.target===e.currentTarget)closeContact();});
+  document.getElementById('du-password').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDeleteUser();});
+  if(localStorage.getItem('flowtrack-dark')==='1'){document.body.classList.add('dark');updateDarkUI(true);}
+});
+initSession();
+</script>
+</body>
+</html>

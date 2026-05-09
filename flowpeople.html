@@ -25,7 +25,7 @@ body.dark{
 body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
 
 /* LOGIN */
-#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)}
+#loginScreen{display:none;align-items:center;justify-content:center;min-height:100vh;background:var(--ink)}
 .lc{background:var(--surface);border-radius:20px;padding:40px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.3)}
 .lc-logo{font-size:22px;font-weight:600;letter-spacing:-.5px;margin-bottom:2px}
 .lc-sub{font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:28px}
@@ -201,7 +201,7 @@ body.dark .tog-track.on{background:var(--text)}
 <body>
 
 <!-- LOGIN -->
-<div id="loginScreen">
+<div id="loginScreen" style="display:none">
   <div class="lc">
     <div class="lc-logo">FlowPeople</div>
     <div class="lc-sub">HR module · anlsco</div>
@@ -289,6 +289,44 @@ body.dark .tog-track.on{background:var(--text)}
     <div id="viewContent"></div>
   </main>
 </div>
+</div>
+
+<!-- DOCUMENT MODAL -->
+<div class="mo" id="docMo">
+  <div class="modal" style="max-width:480px">
+    <div class="mhd"><h3 id="docTitle">Upload document</h3><button class="mclose" onclick="document.getElementById('docMo').classList.remove('open')">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="doc-id">
+      <div class="fg">
+        <div class="frow"><label>Employee <span class="req">*</span></label><select id="doc-emp"></select></div>
+        <div class="frow"><label>Document type <span class="req">*</span></label>
+          <select id="doc-type">
+            <option>Iqama</option><option>Passport</option><option>National ID</option>
+            <option>Contract</option><option>Medical</option><option>Certificate</option>
+            <option>Driving licence</option><option>Insurance</option><option>Other</option>
+          </select>
+        </div>
+        <div class="frow"><label>Expiry date</label><input id="doc-expiry" type="date"></div>
+        <div class="frow"><label>Notes</label><input id="doc-notes" placeholder="Any notes…"></div>
+        <div class="frow" style="grid-column:1/-1">
+          <label>File</label>
+          <div style="border:1.5px dashed var(--border2);border-radius:8px;padding:16px;text-align:center;cursor:pointer;position:relative;background:var(--s2)" onclick="document.getElementById('doc-file').click()">
+            <input type="file" id="doc-file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none" style="color:var(--t3);margin-bottom:6px"><path d="M8 2v8M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <div id="doc-file-label" style="font-size:12px;color:var(--t3)">Click to choose file</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:2px">PDF, Word, or image — max 10MB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div><button class="btn btn-danger" id="docDeleteBtn" style="display:none" onclick="deleteDoc()">Delete</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="document.getElementById('docMo').classList.remove('open')">Cancel</button>
+        <button class="btn btn-dark" id="docSaveBtn" onclick="saveDoc()">Save</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- EMPLOYEE MODAL -->
@@ -483,14 +521,22 @@ const db = createClient(SUPA_URL, SUPA_KEY, {
   auth: { persistSession:true, detectSessionInUrl:true, storageKey:'flowsuite-auth', storage:window.localStorage }
 });
 
-// Session restore from URL hash (file:// fallback)
-(async function() {
+// ── SESSION INIT ──────────────────────────────────────────────
+async function initSession() {
   const hash = window.location.hash.slice(1);
-  if (!hash) return;
-  const p = new URLSearchParams(hash);
-  const at = p.get('access_token'), rt = p.get('refresh_token');
-  if (at && rt) { await db.auth.setSession({access_token:at,refresh_token:rt}); history.replaceState(null,'',window.location.pathname); }
-})();
+  if (hash) {
+    const p = new URLSearchParams(hash);
+    const at = p.get('access_token'), rt = p.get('refresh_token');
+    if (at && rt) {
+      history.replaceState(null, '', window.location.pathname);
+      const { data, error } = await db.auth.setSession({ access_token: at, refresh_token: rt });
+      if (!error && data?.user) { await initApp(data.user); return; }
+    }
+  }
+  const { data: { session } } = await db.auth.getSession();
+  if (session?.user) { await initApp(session.user); return; }
+  document.getElementById('loginScreen').style.display = 'flex';
+}
 
 let currentUser = null, currentRole = null;
 let employees = [], leaveRequests = [], payrollRuns = [], perfReviews = [], documents = [];
@@ -509,6 +555,16 @@ function avatarColor(name){const colors=['#1A3B6E','#1C6B4A','#4A2080','#8A5A0A'
 function calcDays(from,to){if(!from||!to)return 0;return Math.max(0,Math.round((new Date(to)-new Date(from))/86400000)+1);}
 
 // ── AUTH ──────────────────────────────────────────────────────
+async function initApp(user) {
+  const{data:profile}=await db.from('profiles').select('*').eq('id',user.id).single();
+  currentUser=user; currentRole=profile?.role||'operations';
+  document.getElementById('sf-name').textContent=profile?.full_name||user.email;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  if(localStorage.getItem('flowtrack-dark')==='1'){document.body.classList.add('dark');updateDarkUI(true);}
+  await loadAll();
+}
+
 async function doLogin(){
   const email=document.getElementById('loginEmail').value.trim();
   const pass=document.getElementById('loginPass').value;
@@ -519,30 +575,17 @@ async function doLogin(){
   try{
     const{data,error}=await db.auth.signInWithPassword({email,password:pass});
     if(error)throw error;
-    const{data:profile}=await db.from('profiles').select('*').eq('id',data.user.id).single();
-    currentUser=data.user; currentRole=profile?.role||'operations';
-    document.getElementById('sf-name').textContent=profile?.full_name||email;
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('appShell').style.display='block';
-    await loadAll();
+    await initApp(data.user);
   }catch(e){showErr(e.message||'Login failed.');btn.disabled=false;btn.textContent='Sign in';}
 }
 function showErr(msg){const e=document.getElementById('loginErr');e.textContent=msg;e.style.display='block';document.getElementById('loginBtn').disabled=false;document.getElementById('loginBtn').textContent='Sign in';}
 async function doLogout(){await db.auth.signOut();document.getElementById('appShell').style.display='none';document.getElementById('loginScreen').style.display='flex';document.getElementById('loginPass').value='';}
-(async()=>{
-  const{data:{session}}=await db.auth.getSession();
-  if(session?.user){
-    const{data:profile}=await db.from('profiles').select('*').eq('id',session.user.id).single();
-    currentUser=session.user;currentRole=profile?.role||'operations';
-    document.getElementById('sf-name').textContent=profile?.full_name||session.user.email;
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('appShell').style.display='block';
-    await loadAll();
-  }
+document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
   if(localStorage.getItem('flowtrack-dark')==='1'){document.body.classList.add('dark');updateDarkUI(true);}
-})();
+});
+initSession();
 
 // ── DATA ──────────────────────────────────────────────────────
 async function loadAll(){
@@ -574,7 +617,7 @@ function showView(v){
   render();
 }
 function primaryAction(){
-  const map={dashboard:openNewEmp,employees:openNewEmp,org:openNewEmp,leave:openNewLeave,payroll:openPayrollModal,docs:()=>toast('Document uploads coming soon'),performance:openNewPerf};
+  const map={dashboard:openNewEmp,employees:openNewEmp,org:openNewEmp,leave:openNewLeave,payroll:openPayrollModal,docs:openNewDoc,performance:openNewPerf};
   (map[currentView]||openNewEmp)();
 }
 function render(){
@@ -1089,7 +1132,78 @@ function toggleDark(){const d=document.body.classList.toggle('dark');localStorag
 function updateDarkUI(d){const t=document.getElementById('darkTrack'),l=document.getElementById('darkLabel');if(t)t.classList.toggle('on',d);if(l)l.textContent=d?'Light mode':'Dark mode';}
 
 // ── MODAL OVERLAYS ────────────────────────────────────────────
-['empMo','leaveMo','payrollMo','perfMo'].forEach(id=>{
+// ── DOCUMENT CRUD ────────────────────────────────────────────
+function openNewDoc(){
+  document.getElementById('doc-id').value='';
+  document.getElementById('docTitle').textContent='Upload document';
+  document.getElementById('docDeleteBtn').style.display='none';
+  ['doc-expiry','doc-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('doc-file').value='';
+  document.getElementById('doc-file-label').textContent='Click to choose file';
+  document.getElementById('doc-type').value='Iqama';
+  populateDocEmpDropdown('');
+  document.getElementById('docMo').classList.add('open');
+}
+function openEditDoc(id){
+  const d=documents.find(x=>x.id===id);if(!d)return;
+  document.getElementById('doc-id').value=d.id;
+  document.getElementById('docTitle').textContent='Edit document';
+  document.getElementById('docDeleteBtn').style.display='';
+  document.getElementById('doc-expiry').value=d.expiry_date||'';
+  document.getElementById('doc-notes').value=d.notes||'';
+  document.getElementById('doc-type').value=d.doc_type||'Iqama';
+  document.getElementById('doc-file-label').textContent=d.file_name||'No file';
+  populateDocEmpDropdown(d.employee_id);
+  document.getElementById('docMo').classList.add('open');
+}
+function populateDocEmpDropdown(selectedId){
+  const sel=document.getElementById('doc-emp');if(!sel)return;
+  sel.innerHTML=employees.map(e=>`<option value="${e.id}"${e.id===selectedId?' selected':''}>${e.first_name} ${e.last_name}</option>`).join('');
+}
+document.getElementById('doc-file')?.addEventListener('change',function(){
+  document.getElementById('doc-file-label').textContent=this.files[0]?.name||'No file chosen';
+});
+async function saveDoc(){
+  const empId=document.getElementById('doc-emp').value;
+  const type=document.getElementById('doc-type').value;
+  if(!empId||!type){toast('Select employee and document type','err');return;}
+  const editId=document.getElementById('doc-id').value;
+  const fileInput=document.getElementById('doc-file');
+  const btn=document.getElementById('docSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    let fileUrl=null,fileName=null;
+    // Upload file if selected
+    if(fileInput.files[0]){
+      const file=fileInput.files[0];
+      if(file.size>10*1024*1024){toast('Max file size 10MB','err');btn.disabled=false;btn.textContent='Save';return;}
+      const ext=file.name.split('.').pop();
+      const path=`hr-docs/${empId}/${type}-${Date.now()}.${ext}`;
+      const{data:upData,error:upErr}=await db.storage.from('job-files').upload(path,file,{upsert:true});
+      if(upErr)throw upErr;
+      const{data:urlData}=db.storage.from('job-files').getPublicUrl(path);
+      fileUrl=urlData.publicUrl; fileName=file.name;
+    }
+    const payload={
+      employee_id:empId,doc_type:type,
+      expiry_date:document.getElementById('doc-expiry').value||null,
+      notes:document.getElementById('doc-notes').value||null,
+      updated_at:new Date().toISOString(),
+      ...(fileUrl?{file_url:fileUrl,file_name:fileName}:{})
+    };
+    if(editId){const{error}=await db.from('hr_documents').update(payload).eq('id',editId);if(error)throw error;toast('Document updated','ok');}
+    else{const{error}=await db.from('hr_documents').insert({...payload,created_at:new Date().toISOString()});if(error)throw error;toast('Document uploaded','ok');}
+    document.getElementById('docMo').classList.remove('open');await loadAll();
+  }catch(e){toast('Failed: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Save';}
+}
+async function deleteDoc(){
+  const id=document.getElementById('doc-id').value;if(!id||!confirm('Delete this document record?'))return;
+  const{error}=await db.from('hr_documents').delete().eq('id',id);
+  if(error){toast('Failed: '+error.message,'err');return;}
+  toast('Deleted','ok');document.getElementById('docMo').classList.remove('open');await loadAll();
+}
+
+['empMo','leaveMo','payrollMo','perfMo','docMo'].forEach(id=>{
   document.getElementById(id)?.addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
 });
 </script>

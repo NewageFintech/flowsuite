@@ -312,13 +312,13 @@ function renderModules() {
     {
       id: 'reports',
       name: 'Reports hub',
-      desc: 'Cross-module reporting — export consolidated financial and operational reports across all modules.',
+      desc: 'Cross-module consolidated reports — export operational and financial data across FlowTrack, FlowLedger and FlowPeople.',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l5-5 4 4 5-6 4 3"/><path d="M3 21h18"/></svg>`,
       iconBg: '#FDF3DC', iconColor: '#8A5A0A',
-      href: null,
-      tag: 'Coming soon', tagClass: 'new',
-      accessible: false,
-      stats: ['CSV · Excel · PDF','Email scheduling','Custom date ranges'],
+      href: 'reports.html',
+      tag: null, tagClass: null,
+      accessible: isFinance,
+      stats: ['Cross-module data','CSV · Excel · PDF','Scheduled email'],
     },
   ];
 
@@ -362,7 +362,7 @@ async function launchModule(href) {
 // ── QUICK STATS ───────────────────────────────────────────────
 async function loadQuickStats() {
   try {
-    const { data } = await db.from('jobs').select('status,quote_no').eq('is_new',false).neq('status','Paid in Full');
+    const { data } = await db.from('jobs').select('status,quote_no').neq('status','Paid in Full');
     if (!data) return;
     document.getElementById('qs-pos').textContent     = data.length;
     document.getElementById('qs-pending').textContent = data.filter(j=>j.status==='Pending Invoice').length;
